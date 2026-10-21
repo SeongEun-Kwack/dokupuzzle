@@ -261,7 +261,7 @@ export const Board: React.FC<BoardProps> = ({
                   : undefined
               }}
             >
-              {/* Mark ✕ */}
+              {/* Mark */}
               {cellMark === 1 && (
                 <InkX
                   seed={idx}
@@ -270,9 +270,7 @@ export const Board: React.FC<BoardProps> = ({
                 />
               )}
 
-                  ✕
-                </span>
-              )}
+
 
               {/* Detective Placed Chip */}
               {cellMark === 2 && (
