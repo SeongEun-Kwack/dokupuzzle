@@ -289,7 +289,7 @@ export const Board: React.FC<BoardProps> = ({
         })}
 
         {/* Thread Deduction Visual Effects */}
-               {threadEffect && threadPaths && (
+        {threadEffect && threadPaths && (
           <>
             <svg
               className="absolute inset-0 w-full h-full pointer-events-none z-20"
@@ -325,3 +325,7 @@ export const Board: React.FC<BoardProps> = ({
             />
           </>
         )}
+      </div>
+    </div>
+  );
+};
