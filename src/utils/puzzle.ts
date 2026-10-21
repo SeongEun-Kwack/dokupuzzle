@@ -396,6 +396,26 @@ function numberWords(n: number, drafts: Draft[]) {
   return { numbers, words };
 }
 
+/* ───────────────── 메인 API ───────────────── */
+
+export function generateCrossword(lang: Lang, level: number, n = 8): CrosswordData {
+  const seed = n * 100003 + level * 7919 + (lang === 'en' ? 104729 : 0);
+  const rng = mulberry32(seed);
+  const bank = lang === 'ko' ? KO_BANK : EN_BANK;
+
+  // 레벨이 오를수록 단어 수 증가 (6 ~ 14개)
+  const target = Math.min(14, 6 + Math.floor(level / 2));
+
+  let best = buildOnce(n, bank, target, rng);
+  for (let i = 0; i < 300 && best.placed.length < target; i++) {
+    const t = buildOnce(n, bank, target, rng);
+    if (t.score > best.score) best = t;
+  }
+
+  const { numbers, words } = numberWords(n, best.placed);
+  return { size: n, lang, level, grid: best.g, numbers, words };
+}
+
 /* ───────────────── 정답 체크 ───────────────── */
 
 export function createEmptyInput(data: CrosswordData): string[][] {
