@@ -64,11 +64,11 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
       onClick={e => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#1e0f05]/70 backdrop-blur-[2px] animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 modal-backdrop animate-fade-in"
     >
-      <div className="relative w-full max-w-[440px] rounded-2xl p-0 text-center bg-gradient-to-b from-[#fbe9c8] to-[#f1d4a2] border-[5px] border-[#7a4a24] shadow-[0_6px_0_#4a2c14,0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden">
+      <div className="relative w-full max-w-[440px] case-modal p-0 text-center overflow-hidden">
         {/* Header - No Skip button, clean title with top-right Close X */}
-        <div className="relative py-3 px-5 bg-gradient-to-r from-[#8f5d34] to-[#6e4323] text-[#fff1d6] shadow-md flex items-center justify-between">
+        <div className="relative py-3 px-5 case-modal-header flex items-center justify-between">
           <h2 className="font-serif font-black text-base sm:text-lg tracking-wider m-0">
             {translate(language, 'howto')}
           </h2>
@@ -144,7 +144,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
           </h3>
 
           {/* Stable, non-collapsing text container with break-keep for horizontal readability */}
-          <div className="w-full bg-[#f4dfbe]/75 border border-[#8a5a2b]/30 rounded-xl px-4 py-3 min-h-[76px] flex items-center justify-center shadow-inner">
+          <div className="w-full paper-note px-4 py-3 min-h-[76px] flex items-center justify-center shadow-inner">
             <p
               className="text-xs sm:text-[13px] text-[#3d200a] leading-relaxed break-keep font-medium text-center m-0"
               dangerouslySetInnerHTML={{ __html: currentStep.p }}

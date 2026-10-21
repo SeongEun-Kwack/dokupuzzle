@@ -643,7 +643,7 @@ export default function App() {
 
       {isRestartConfirmOpen && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[#1e0f05]/70 backdrop-blur-[2px] animate-fade-in"
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 modal-backdrop animate-fade-in"
           role="presentation"
           onClick={event => { if (event.target === event.currentTarget) setIsRestartConfirmOpen(false); }}
         >

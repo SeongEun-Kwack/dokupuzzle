@@ -42,9 +42,9 @@ export const CaseDossierModal: React.FC<CaseDossierModalProps> = ({
       }}
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#1e0f05]/75 backdrop-blur-[2px] animate-fade-in"
     >
-      <div className="relative w-full max-w-[440px] rounded-2xl p-0 text-center bg-gradient-to-b from-[#fbe9c8] to-[#f1d4a2] border-[5px] border-[#7a4a24] shadow-[0_6px_0_#4a2c14,0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden">
+      <div className="relative w-full max-w-[440px] case-modal p-0 text-center overflow-hidden">
         {/* Header */}
-        <div className="relative py-3.5 px-5 bg-gradient-to-r from-[#8f5d34] to-[#6e4323] text-[#fff1d6] shadow-md flex items-center justify-between">
+        <div className="relative py-3.5 px-5 case-modal-header flex items-center justify-between">
           <div className="flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-[#ffdca8]" />
             <h2 className="font-serif font-black text-base sm:text-lg tracking-wider m-0">
@@ -63,7 +63,7 @@ export const CaseDossierModal: React.FC<CaseDossierModalProps> = ({
         {/* Content */}
         <div className="p-4 sm:p-5 flex flex-col gap-3 text-left">
           {/* Current Stage Card */}
-          <div className="rounded-xl p-3.5 bg-white/70 border border-[#8a5a2b]/30 shadow-inner">
+          <div className="paper-note p-3.5">
             <div className="font-serif font-black text-base sm:text-lg text-[#6e4323] mb-1.5 flex items-center justify-between">
               <span>
                 {translate(language, 'caseLbl')} {String(currentLevel).padStart(3, '0')} · {caseName}

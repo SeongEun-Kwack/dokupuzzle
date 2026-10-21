@@ -42,11 +42,11 @@ export const ResultModal: React.FC<ResultModalProps> = ({
         onClick={e => {
           if (e.target === e.currentTarget) onClose();
         }}
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1e0f05]/70 backdrop-blur-[2px] animate-fade-in"
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop animate-fade-in"
       >
-        <div className="relative w-full max-w-[390px] rounded-2xl p-0 text-center bg-gradient-to-b from-[#fbe9c8] to-[#f1d4a2] border-[5px] border-[#7a4a24] shadow-[0_6px_0_#4a2c14,0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden">
+        <div className="relative w-full max-w-[390px] case-modal p-0 text-center overflow-hidden">
           {/* Header */}
-          <div className="py-3.5 px-6 bg-gradient-to-r from-[#8f5d34] to-[#6e4323] text-[#fff1d6] shadow-md">
+          <div className="py-3.5 px-6 case-modal-header">
             <h2 className="font-serif font-black text-xl tracking-widest m-0">
               {translate(language, 'solved')}
             </h2>
@@ -89,7 +89,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
             </div>
 
             {/* Watson's Notebook Excerpt */}
-            <div className="w-full text-left text-xs sm:text-[13px] leading-relaxed p-3 rounded-xl bg-white/50 border border-[#8a5a2b]/30 my-2 text-[#3d210b]">
+            <div className="w-full text-left text-xs sm:text-[13px] leading-relaxed p-3 paper-note my-2 text-[#3d210b]">
               <p className="m-0 italic">"{briefText}"</p>
               <div className="text-right text-[11px] opacity-70 mt-1 font-medium">
                 {translate(language, 'sig')}
@@ -123,11 +123,11 @@ export const ResultModal: React.FC<ResultModalProps> = ({
       onClick={e => {
         if (e.target === e.currentTarget) onClose();
       }}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1e0f05]/70 backdrop-blur-[2px] animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 modal-backdrop animate-fade-in"
     >
-      <div className="relative w-full max-w-[390px] rounded-2xl p-0 text-center bg-gradient-to-b from-[#fbe9c8] to-[#f1d4a2] border-[5px] border-[#7a4a24] shadow-[0_6px_0_#4a2c14,0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden">
+      <div className="relative w-full max-w-[390px] case-modal p-0 text-center overflow-hidden">
         {/* Header */}
-        <div className="py-3.5 px-6 bg-gradient-to-r from-[#8f2d26] to-[#6e1a14] text-[#fff1d6] shadow-md">
+        <div className="py-3.5 px-6 case-modal-header is-fail">
           <h2 className="font-serif font-black text-xl tracking-widest m-0">
             {translate(language, 'failTitle')}
           </h2>
@@ -139,7 +139,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
           </p>
 
           {/* Sherlock's investigative hint */}
-          <div className="w-full text-left text-xs sm:text-[13px] leading-relaxed p-3.5 rounded-xl bg-white/50 border border-[#8f2d26]/40 my-2 text-[#4a1a14]">
+          <div className="w-full text-left text-xs sm:text-[13px] leading-relaxed p-3.5 paper-note my-2 text-[#4a1a14]">
             <p className="m-0 italic font-serif">"{translate(language, 'failNote')}"</p>
             <div className="text-right text-xs font-serif font-bold text-[#8f2d26] mt-2">
               {translate(language, 'failSig')}

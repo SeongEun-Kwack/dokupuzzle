@@ -1,4 +1,5 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react';
+import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
+import { InkDefs, InkX, roughStrokePath } from './InkMarks';
 import { BoardSize, CellState, ThreadEffect } from '../types';
 import { PALETTE } from '../utils/puzzle';
 
@@ -191,8 +192,25 @@ export const Board: React.FC<BoardProps> = ({
     executeTapAction(index, true);
   };
 
+  const threadPaths = useMemo(() => {
+    if (!threadEffect) return null;
+    const cx = ((threadEffect.c + 0.5) / n) * 1000;
+    const cy = ((threadEffect.r + 0.5) / n) * 1000;
+    const seed = threadEffect.r * 131 + threadEffect.c * 17 + 1;
+    return {
+      cx,
+      cy,
+      h: roughStrokePath(seed, cy, 7),
+      hPass: roughStrokePath(seed + 7, cy + 1.6, 3.5),
+      v: roughStrokePath(seed + 3, cx, 7, true),
+      vPass: roughStrokePath(seed + 11, cx - 1.6, 3.5, true)
+    };
+  }, [threadEffect, n]);
+
+
   return (
     <div className="board-frame p-2 sm:p-2.5 md:p-3.5 rounded-2xl w-full max-w-[min(100%,460px)] md:max-w-[560px] lg:max-w-[620px] mx-auto shadow-2xl relative select-none">
+      <InkDefs /> 
       <div
         ref={containerRef}
         onPointerMove={handlePointerMove}
@@ -245,12 +263,13 @@ export const Board: React.FC<BoardProps> = ({
             >
               {/* Mark ✕ */}
               {cellMark === 1 && (
-                <span
-                  className="font-black text-[#321908]/75 pointer-events-none select-none transition-transform"
-                  style={{
-                    fontSize: n <= 6 ? 'clamp(16px, 5vw, 36px)' : 'clamp(13px, 4vw, 28px)'
-                  }}
-                >
+                <InkX
+                  seed={idx}
+                  className="pointer-events-none"
+                  style={{ width: n <= 6 ? '60%' : '64%', height: n <= 6 ? '60%' : '64%' }}
+                />
+              )}
+
                   ✕
                 </span>
               )}
@@ -272,37 +291,39 @@ export const Board: React.FC<BoardProps> = ({
         })}
 
         {/* Thread Deduction Visual Effects */}
-        {threadEffect && (
+               {threadEffect && threadPaths && (
           <>
-            {/* Horizontal thread */}
-            <div
-              className="absolute left-0 right-0 h-[2px] -mt-[1px] bg-[#b8322a] pointer-events-none shadow-[0_1px_3px_rgba(0,0,0,0.6)] z-20 thread-h"
-              style={{
-                top: `${((threadEffect.r + 0.5) / n) * 100}%`,
-                transformOrigin: `${((threadEffect.c + 0.5) / n) * 100}% 50%`
-              }}
-            />
-            {/* Vertical thread */}
-            <div
-              className="absolute top-0 bottom-0 w-[2px] -ml-[1px] bg-[#b8322a] pointer-events-none shadow-[0_1px_3px_rgba(0,0,0,0.6)] z-20 thread-v"
-              style={{
-                left: `${((threadEffect.c + 0.5) / n) * 100}%`,
-                transformOrigin: `50% ${((threadEffect.r + 0.5) / n) * 100}%`
-              }}
-            />
+            <svg
+              className="absolute inset-0 w-full h-full pointer-events-none z-20"
+              viewBox="0 0 1000 1000"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <g filter="url(#ink-line)" fill="#8e2a22">
+                <g
+                  className="thread-h"
+                  style={{ transformBox: 'view-box', transformOrigin: `${threadPaths.cx}px ${threadPaths.cy}px` }}
+                >
+                  <path d={threadPaths.h} opacity="0.85" />
+                  <path d={threadPaths.hPass} opacity="0.35" />
+                </g>
+                <g
+                  className="thread-v"
+                  style={{ transformBox: 'view-box', transformOrigin: `${threadPaths.cx}px ${threadPaths.cy}px` }}
+                >
+                  <path d={threadPaths.v} opacity="0.85" />
+                  <path d={threadPaths.vPass} opacity="0.35" />
+                </g>
+              </g>
+            </svg>
             {/* Gold map pin */}
             <div
               className="absolute w-3.5 h-3.5 -mt-[7px] -ml-[7px] rounded-full pointer-events-none shadow-[0_2px_4px_rgba(0,0,0,0.6)] z-30 pin-drop"
               style={{
                 top: `${((threadEffect.r + 0.5) / n) * 100}%`,
                 left: `${((threadEffect.c + 0.5) / n) * 100}%`,
-                background:
-                  'radial-gradient(circle at 35% 35%, #fff0c0, #c9a24a 50%, #6b4a12)'
+                background: 'radial-gradient(circle at 35% 35%, #fff0c0, #c9a24a 50%, #6b4a12)'
               }}
             />
           </>
         )}
-      </div>
-    </div>
-  );
-};

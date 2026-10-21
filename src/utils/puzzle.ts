@@ -1,14 +1,15 @@
 import { BoardSize, PuzzleData } from '../types';
 
-export const PALETTE = [
-  '#e8c48e',
-  '#c9784f',
-  '#9fae78',
-  '#8fa8bb',
-  '#d29aa0',
-  '#e0b04a',
-  '#a796bf',
-  '#6fa59f'
+export const REGION_COLORS = [
+  "#9a5546", // 버건디 벽돌
+  "#7f8b5e", // 모스 그린
+  "#5f7487", // 슬레이트 블루
+  "#76628a", // 플럼
+  "#527c78", // 딥 틸
+  "#b8924a", // 머스터드
+  "#c7b08a", // 양피지
+  "#4a5670", // 네이비
+  "#8a6a4f", // 담배잎 브라운
 ];
 
 export function mulberry32(a: number) {

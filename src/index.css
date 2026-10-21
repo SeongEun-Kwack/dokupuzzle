@@ -1,4 +1,10 @@
 @import "tailwindcss";
+@theme {
+  --font-serif: "Nanum Myeongjo", serif;
+  --font-sans: "Gowun Dodum", sans-serif;
+  --f-title: "Nanum Myeongjo", "AppleMyungjo", "Batang", serif;
+}
+
 
 :root {
   --f-title: "Nanum Myeongjo", serif;
@@ -272,6 +278,22 @@ body {
 }
 
 /* ---------- Board frame & Cell styling ---------- */
+.modal-backdrop { background: radial-gradient(ellipse at 50% 40%, rgba(10,16,18,.55), rgba(3,6,8,.88)); backdrop-filter: blur(2px); }
+.case-modal {
+  border-radius: 6px;
+  color: #2e1c0e;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255,255,255,.35), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(120,80,30,.035) 0 1px, transparent 1px 4px),
+    linear-gradient(#f3e4c3, #e4cfa2);
+  border: 1px solid #0d0704;
+  box-shadow: 0 0 0 4px #2a170c, 0 0 0 5px rgba(201,162,90,.55), 0 24px 60px rgba(0,0,0,.7), inset 0 0 40px rgba(140,95,40,.25);
+}
+.case-modal-header { color: #f0d598; background: linear-gradient(160deg, #3b2416, #24150c); border-bottom: 2px solid #c9a25a; }
+.case-modal-header.is-fail { background: linear-gradient(160deg, #7a221b, #4a110d); }
+.paper-note { background: rgba(255,248,230,.45); border: 1px solid rgba(110,70,30,.28); border-radius: 3px; box-shadow: inset 0 0 14px rgba(140,95,40,.15); }
+
+
 .board-frame {
   background:
     radial-gradient(ellipse at 50% 0%, rgba(255, 200, 130, .1), transparent 60%),
@@ -284,6 +306,7 @@ body {
     0 14px 32px rgba(0, 0, 0, .65),
     0 0 60px rgba(255, 180, 90, .06);
 }
+
 
 /* 사건 제목 · 상태 메시지 · 도구 라벨 */
 .case-title {
@@ -362,6 +385,7 @@ body {
   color: rgba(28, 16, 8, .6);
   line-height: 1;
 }
+
 
 /* Mobile responsive media queries */
 @media (max-width: 480px) {
@@ -458,3 +482,7 @@ body {
   }
   .tablet-nav .tool-btn { width: 100% !important; }
 }
+
+.ink-x { display: block; animation: ink-stamp .18s ease-out both; }
+@keyframes ink-stamp { from { opacity: 0; transform: scale(1.18) rotate(-4deg); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .ink-x { animation: none; } }
