@@ -1,7 +1,10 @@
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { CrosswordGame } from './components/CrosswordGame';
 =======
+=======
+>>>>>>> parent of 79818ce (fix: remove suduku)
 =======
 >>>>>>> parent of 79818ce (fix: remove suduku)
 import React, { useState, useEffect, useCallback, useRef } from 'react';
@@ -14,7 +17,11 @@ import {
   UserSettings
 } from './types';
 <<<<<<< HEAD
+<<<<<<< HEAD
 import { generatePuzzle } from './utils/puzzle';
+=======
+import { usePuzzle } from './utils/puzzle';
+>>>>>>> parent of 79818ce (fix: remove suduku)
 =======
 import { usePuzzle } from './utils/puzzle';
 >>>>>>> parent of 79818ce (fix: remove suduku)
@@ -35,6 +42,7 @@ const MAX_COVER = 3;
 const HINT_MAX = 3;
 const MAX_AUTO_CLEAR = 5;
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> parent of 40664f2 (fix: 정답이 50/50% 일 경우 regenerated)
 =======
 >>>>>>> parent of 79818ce (fix: remove suduku)
@@ -45,6 +53,10 @@ export default function App() {
   return <CrosswordGame />;
 =======
 =======
+>>>>>>> parent of 79818ce (fix: remove suduku)
+=======
+
+export default function App() {
 >>>>>>> parent of 79818ce (fix: remove suduku)
   const [scene, setScene] = useState<'title' | 'loading' | 'main' | 'ending'>('title');
   const [loadProgress, setLoadProgress] = useState(0);
@@ -162,7 +174,11 @@ export default function App() {
       // Async generation to avoid blocking UI frame
       setTimeout(() => {
 <<<<<<< HEAD
+<<<<<<< HEAD
         const p = generatePuzzle(targetSize, targetLevel);
+=======
+        const p = usePuzzle(targetSize, targetLevel);
+>>>>>>> parent of 79818ce (fix: remove suduku)
 =======
         const p = usePuzzle(targetSize, targetLevel);
 >>>>>>> parent of 79818ce (fix: remove suduku)
@@ -740,7 +756,10 @@ export default function App() {
     </div>
   );
 <<<<<<< HEAD
+<<<<<<< HEAD
 >>>>>>> parent of 40664f2 (fix: 정답이 50/50% 일 경우 regenerated)
+=======
+>>>>>>> parent of 79818ce (fix: remove suduku)
 =======
 >>>>>>> parent of 79818ce (fix: remove suduku)
 }
