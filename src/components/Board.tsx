@@ -1,20 +1,21 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { BoardSize, CellState, ThreadEffect } from '../types';
+import { BoardSize, CellState, ThreadEffect, ToolType } from '../types';
 import { PALETTE } from '../utils/puzzle';
 import { DetectiveSVG } from './DetectiveSVG';
 
-const DOUBLE_TAP_MS = 400;
+const DOUBLE_TAP_MS = 360;
+const LONG_PRESS_MS = 480;
 
 interface BoardProps {
   n: BoardSize;
   regions: number[][];
   marks: CellState[];
+  tool: ToolType;
   badCell: number | null;
   hintCell: number | null;
   zoneCells: number[];
   threadEffect: ThreadEffect | null;
   comboCell: { index: number; id: number } | null;
-  onCellClick: (index: number) => void;
   onCellDragMark: (index: number, val: 0 | 1) => void;
   onCellPlace: (index: number) => void;
 }
@@ -23,29 +24,32 @@ export const Board: React.FC<BoardProps> = ({
   n,
   regions,
   marks,
+  tool,
   badCell,
   hintCell,
   zoneCells,
   threadEffect,
   comboCell,
-  onCellClick,
   onCellDragMark,
   onCellPlace
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [dragVal, setDragVal] = useState<0 | 1 | null>(null);
-  const lastTapRef = useRef<{ i: number; t: number }>({ i: -1, t: 0 });
+  const marksRef = useRef(marks);
+  marksRef.current = marks;
+  const lastTapRef = useRef<{ i: number; t: number; tapPlace: boolean }>({ i: -1, t: 0, tapPlace: false });
   const pressRef = useRef<{
     i: number;
     val: 0 | 1;
+    tapPlace: boolean;
     dragging: boolean;
     longPressed: boolean;
+    lastCell: number;
     timer: ReturnType<typeof setTimeout> | null;
   } | null>(null);
   const suppressPointerUpRef = useRef(false);
-  const pendingClickRef = useRef<{ index: number; timer: ReturnType<typeof setTimeout> } | null>(null);
-  const onCellClickRef = useRef(onCellClick);
-  onCellClickRef.current = onCellClick;
+  const pendingClickRef = useRef<{ index: number; place: boolean; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const actionRef = useRef({ onCellPlace, onCellDragMark });
+  actionRef.current = { onCellPlace, onCellDragMark };
 
   const getRowCol = useCallback(
     (index: number): [number, number] => {
@@ -54,7 +58,58 @@ export const Board: React.FC<BoardProps> = ({
     [n]
   );
 
-  // Global pointer up listener to cancel dragging
+  const executeTapAction = useCallback((index: number, place: boolean) => {
+    if (place) {
+      actionRef.current.onCellPlace(index);
+      return;
+    }
+    const current = marksRef.current[index];
+    if (current === 2) return;
+    const next: 0 | 1 = current === 1 ? 0 : 1;
+    const updated = [...marksRef.current];
+    updated[index] = next;
+    marksRef.current = updated;
+    actionRef.current.onCellDragMark(index, next);
+  }, []);
+
+  const applyMark = useCallback((index: number, val: 0 | 1) => {
+    if (marksRef.current[index] === 2 || marksRef.current[index] === val) return;
+    const updated = [...marksRef.current];
+    updated[index] = val;
+    marksRef.current = updated;
+    actionRef.current.onCellDragMark(index, val);
+  }, []);
+
+  const paintPath = useCallback((from: number, to: number, val: 0 | 1) => {
+    let x0 = from % n, y0 = Math.floor(from / n);
+    const x1 = to % n, y1 = Math.floor(to / n);
+    const dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
+    const dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
+    let error = dx + dy;
+    while (true) {
+      applyMark(y0 * n + x0, val);
+      if (x0 === x1 && y0 === y1) break;
+      const twiceError = 2 * error;
+      if (twiceError >= dy) { error += dy; x0 += sx; }
+      if (twiceError <= dx) { error += dx; y0 += sy; }
+    }
+  }, [applyMark, n]);
+
+  const moveStrokeTo = useCallback((index: number) => {
+    const press = pressRef.current;
+    if (!press || press.longPressed || press.i === index) return;
+    if (!press.dragging) {
+      if (press.timer) clearTimeout(press.timer);
+      press.dragging = true;
+      lastTapRef.current = { i: -1, t: 0, tapPlace: false };
+      paintPath(press.i, index, press.val);
+    } else if (press.lastCell !== index) {
+      paintPath(press.lastCell, index, press.val);
+    }
+    press.lastCell = index;
+  }, [paintPath]);
+
+  // Global pointer-up listener keeps touch and mouse strokes alive across cell boundaries.
   useEffect(() => {
     const handlePointerUp = () => {
       if (suppressPointerUpRef.current) {
@@ -67,18 +122,17 @@ export const Board: React.FC<BoardProps> = ({
         if (!press.dragging && !press.longPressed) {
           if (pendingClickRef.current) {
             clearTimeout(pendingClickRef.current.timer);
-            onCellClickRef.current(pendingClickRef.current.index);
+            executeTapAction(pendingClickRef.current.index, pendingClickRef.current.place);
           }
           const index = press.i;
           const timer = setTimeout(() => {
-            onCellClickRef.current(index);
+            executeTapAction(index, press.tapPlace);
             pendingClickRef.current = null;
           }, DOUBLE_TAP_MS);
-          pendingClickRef.current = { index, timer };
+          pendingClickRef.current = { index, place: press.tapPlace, timer };
         }
         pressRef.current = null;
       }
-      setDragVal(null);
     };
     window.addEventListener('pointerup', handlePointerUp);
     return () => {
@@ -86,70 +140,62 @@ export const Board: React.FC<BoardProps> = ({
       if (pressRef.current?.timer) clearTimeout(pressRef.current.timer);
       if (pendingClickRef.current) clearTimeout(pendingClickRef.current.timer);
     };
-  }, []);
+  }, [executeTapAction]);
 
   const handlePointerDown = (e: React.PointerEvent, index: number) => {
     if (e.button === 2) return; // Right click handled by contextMenu
 
+    e.preventDefault();
     const now = Date.now();
     if (lastTapRef.current.i === index && now - lastTapRef.current.t < DOUBLE_TAP_MS) {
-      // Double-tap detected: cancel the pending short-tap elimination and place.
+      // Double-tap performs the opposite action from this mode's short tap.
+      const doubleTapPlace = !lastTapRef.current.tapPlace;
       if (pendingClickRef.current) {
         clearTimeout(pendingClickRef.current.timer);
         pendingClickRef.current = null;
       }
       lastTapRef.current = { i: -1, t: 0 };
       suppressPointerUpRef.current = true;
-      setDragVal(null);
-      onCellPlace(index);
+      executeTapAction(index, doubleTapPlace);
       return;
     }
     if (pendingClickRef.current) {
       clearTimeout(pendingClickRef.current.timer);
-      onCellClick(pendingClickRef.current.index);
+      executeTapAction(pendingClickRef.current.index, pendingClickRef.current.place);
       pendingClickRef.current = null;
     }
-    lastTapRef.current = { i: index, t: now };
+    if (marksRef.current[index] === 2) return;
 
-    if (marks[index] === 2) return; // Can't mark over placed detective
-
-    const targetVal: 0 | 1 = marks[index] === 1 ? 0 : 1;
-    const press = { i: index, val: targetVal, dragging: false, longPressed: false, timer: null as ReturnType<typeof setTimeout> | null };
+    const tapPlace = tool === 'agent';
+    lastTapRef.current = { i: index, t: now, tapPlace };
+    const targetVal: 0 | 1 = marksRef.current[index] === 1 ? 0 : 1;
+    const press = { i: index, val: targetVal, tapPlace, dragging: false, longPressed: false, lastCell: index, timer: null as ReturnType<typeof setTimeout> | null };
     press.timer = setTimeout(() => {
       if (pressRef.current !== press || press.dragging) return;
       press.longPressed = true;
-      setDragVal(null);
-      onCellPlace(index);
-    }, 450);
+      lastTapRef.current = { i: -1, t: 0, tapPlace: false };
+      executeTapAction(index, !press.tapPlace);
+    }, LONG_PRESS_MS);
     pressRef.current = press;
+    containerRef.current?.setPointerCapture(e.pointerId);
   };
 
   const handlePointerEnter = (index: number) => {
-    const press = pressRef.current;
-    if (!press || press.i === index || press.longPressed) return;
-    if (!press.dragging) {
-      if (press.timer) clearTimeout(press.timer);
-      press.dragging = true;
-      setDragVal(press.val);
-      if (marks[press.i] !== press.val) onCellDragMark(press.i, press.val);
-    }
-    if (dragVal !== press.val) setDragVal(press.val);
-    if (marks[index] === 2) return;
-    if (marks[index] !== press.val) {
-      onCellDragMark(index, press.val);
-    }
+    moveStrokeTo(index);
   };
 
   const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!pressRef.current || pressRef.current.longPressed) return;
-    const target = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>('[data-index]');
-    const index = Number(target?.dataset.index);
-    if (Number.isInteger(index) && index >= 0 && index < n * n) handlePointerEnter(index);
+    if (!pressRef.current || pressRef.current.longPressed || !containerRef.current) return;
+    const bounds = containerRef.current.getBoundingClientRect();
+    if (e.clientX < bounds.left || e.clientX >= bounds.right || e.clientY < bounds.top || e.clientY >= bounds.bottom) return;
+    const col = Math.min(n - 1, Math.floor(((e.clientX - bounds.left) / bounds.width) * n));
+    const row = Math.min(n - 1, Math.floor(((e.clientY - bounds.top) / bounds.height) * n));
+    moveStrokeTo(row * n + col);
   };
 
   const handleContextMenu = (e: React.MouseEvent, index: number) => {
     e.preventDefault();
-    onCellPlace(index);
+    executeTapAction(index, tool !== 'agent');
   };
 
   return (
@@ -186,9 +232,7 @@ export const Board: React.FC<BoardProps> = ({
               onPointerDown={e => handlePointerDown(e, idx)}
               onPointerEnter={() => handlePointerEnter(idx)}
               onContextMenu={e => handleContextMenu(e, idx)}
-              className={`relative flex items-center justify-center cursor-pointer transition-colors duration-150 ${
-                isBad ? 'animate-shake' : ''
-              }`}
+              className={`relative flex items-center justify-center cursor-pointer transition-colors duration-150 ${isBad ? 'animate-shake' : ''} ${comboCell?.index === idx ? 'combo-burst-cell' : ''}`}
               style={{
                 backgroundColor: bgCol,
                 backgroundImage:

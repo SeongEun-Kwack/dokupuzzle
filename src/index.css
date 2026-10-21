@@ -105,7 +105,10 @@ body {
 @keyframes scene-slide-in { from { opacity: 0; transform: translateX(34px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes prompt-pulse { 50% { opacity: .55; } }
 .combo-particles { position: absolute; z-index: 40; inset: 0; pointer-events: none; }
-.combo-particles i { position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; border-radius: 2px; background: #ffe37b; box-shadow: 0 0 10px #ffb52f, 0 0 18px rgba(255, 185, 40, .8); animation: combo-spark .85s cubic-bezier(.12,.72,.3,1) forwards; }
+.combo-burst-cell { z-index: 35; animation: combo-cell-flash 1.1s ease-out both; }
+.combo-burst-cell::after { content: ""; position: absolute; inset: 3px; border: 3px solid #fff3a0; border-radius: 10px; pointer-events: none; box-shadow: 0 0 22px 8px rgba(255, 191, 45, .95), inset 0 0 22px rgba(255, 245, 150, .85); animation: combo-cell-ring 1.05s ease-out both; }
+.combo-particles::before { content: ""; position: absolute; inset: 8%; border: 3px solid #fff1a6; border-radius: 50%; box-shadow: 0 0 18px 6px rgba(255, 190, 40, .9), inset 0 0 16px rgba(255, 230, 120, .8); animation: combo-ring 1.05s ease-out forwards; }
+.combo-particles i { display: block; position: absolute; left: 50%; top: 50%; width: 11px; height: 11px; border-radius: 3px; background: #fff1a6; box-shadow: 0 0 14px 3px #ffb52f, 0 0 26px rgba(255, 185, 40, .95); animation: combo-spark 1.05s cubic-bezier(.12,.72,.3,1) forwards; }
 .combo-particles i:nth-child(1) { --dx: -28px; --dy: -38px; }
 .combo-particles i:nth-child(2) { --dx: 4px; --dy: -45px; }
 .combo-particles i:nth-child(3) { --dx: 32px; --dy: -26px; }
@@ -116,7 +119,16 @@ body {
 .combo-particles i:nth-child(8) { --dx: -44px; --dy: -9px; }
 .combo-particles i:nth-child(9) { --dx: 2px; --dy: 23px; animation-delay: .05s; }
 .combo-particles i:nth-child(10) { --dx: 17px; --dy: -5px; animation-delay: .08s; }
-@keyframes combo-spark { 0% { transform: translate(-50%, -50%) scale(.35) rotate(0); opacity: 0; } 18% { opacity: 1; } 100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0) rotate(135deg); opacity: 0; } }
+.combo-particles i:nth-child(odd) { border-radius: 50%; background: #fff; }
+@keyframes combo-spark { 0% { transform: translate(-50%, -50%) scale(.6) rotate(0); opacity: 1; } 100% { transform: translate(var(--dx), var(--dy)) scale(0) rotate(180deg); opacity: 0; } }
+@keyframes combo-ring { 0% { transform: scale(.2); opacity: 1; } 100% { transform: scale(1.25); opacity: 0; } }
+@keyframes combo-cell-flash { 0% { filter: brightness(1); } 18% { filter: brightness(1.9) saturate(1.7); } 100% { filter: brightness(1); } }
+@keyframes combo-cell-ring { 0% { opacity: 1; transform: scale(.6); } 100% { opacity: 0; transform: scale(1.25); } }
+.mode-disc { transform-style: preserve-3d; animation: othello-flip .52s cubic-bezier(.2,.7,.3,1) both; }
+.mode-agent-active { background: linear-gradient(#fff0cf, #f0c27c); box-shadow: inset 0 2px 0 rgba(255,255,255,.7), 0 2px 0 #7a4a22; }
+.mode-x-active { background: linear-gradient(#f0dfc2, #bba98c); box-shadow: inset 0 2px 0 rgba(255,255,255,.55), 0 2px 0 #7a4a22; }
+.mode-idle { filter: saturate(.7); }
+@keyframes othello-flip { 0% { transform: perspective(240px) rotateY(-88deg) scale(.86); } 55% { transform: perspective(240px) rotateY(12deg) scale(1.04); } 100% { transform: perspective(240px) rotateY(0) scale(1); } }
 @media (prefers-reduced-motion: reduce) { .scene-shell, .scene-prompt { animation: none; } }
 
 /* Board frame & Cell styling */

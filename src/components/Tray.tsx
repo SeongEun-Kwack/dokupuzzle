@@ -27,13 +27,13 @@ export const Tray: React.FC<TrayProps> = ({
   return (
     <nav className="tray tablet-nav flex justify-around items-center gap-1 py-2.5 sm:py-3 px-2 sm:px-3 rounded-2xl bg-[#6e4323]/25 shadow-[inset_0_2px_5px_rgba(60,30,10,0.3)] w-full max-w-[min(100%,460px)] mx-auto">
       {/* Required mobile order: Place, Eliminate, Hint, Auto-clear, Restart. */}
-      <button onClick={() => onSelectTool('agent')} className={itemClass}>
-        <span className={`${iconClass} ${tool === 'agent' ? 'ring-3 ring-[#b8322a]' : ''}`}><span className="w-7 h-7 sm:w-8 sm:h-8"><DetectiveSVG fill="#4a2a12" /></span></span>
+      <button onClick={() => onSelectTool('agent')} aria-pressed={tool === 'agent'} className={itemClass}>
+        <span key={tool} className={`${iconClass} mode-disc ${tool === 'agent' ? 'mode-agent-active ring-3 ring-[#b8322a]' : 'mode-idle'}`}><span className="w-7 h-7 sm:w-8 sm:h-8"><DetectiveSVG fill="#4a2a12" /></span></span>
         <span className={labelClass}>{translate(language, 'tPlace')}</span>
       </button>
 
-      <button onClick={() => onSelectTool('x')} className={itemClass}>
-        <span className={`${iconClass} ${tool === 'x' ? 'ring-3 ring-[#b8322a]' : ''}`}><XIcon className="w-7 h-7 sm:w-8 sm:h-8 stroke-[3.2] text-[#4a2a12]" /></span>
+      <button onClick={() => onSelectTool('x')} aria-pressed={tool === 'x'} className={itemClass}>
+        <span key={tool} className={`${iconClass} mode-disc ${tool === 'x' ? 'mode-x-active ring-3 ring-[#b8322a]' : 'mode-idle'}`}><XIcon className="w-7 h-7 sm:w-8 sm:h-8 stroke-[3.2] text-[#4a2a12]" /></span>
         <span className={labelClass}>{translate(language, 'tMark')}</span>
       </button>
 

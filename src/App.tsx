@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   BoardSize,
   CellState,
@@ -46,12 +46,15 @@ export default function App() {
 
   // Board play state
   const [marks, setMarks] = useState<CellState[]>(() => Array(size * size).fill(0));
+  const marksRef = useRef(marks);
+  marksRef.current = marks;
   const [cover, setCover] = useState<number>(MAX_COVER);
   const [hintsLeft, setHintsLeft] = useState<number>(HINT_MAX);
   const [elapsed, setElapsed] = useState<number>(0);
   const [score, setScore] = useState<number>(0);
   const [combo, setCombo] = useState(false);
   const [comboCell, setComboCell] = useState<{ index: number; id: number } | null>(null);
+  const comboEffectCounter = useRef(0);
   const [autoClearCount, setAutoClearCount] = useState(() => storage.loadAutoClearInventory());
   const [autoClearUsed, setAutoClearUsed] = useState(false);
   const [undoStack, setUndoStack] = useState<CellState[][]>([]);
@@ -147,6 +150,7 @@ export default function App() {
         const saved = storage.loadGameState(targetSize, targetLevel);
         if (saved && !saved.isSolved && saved.marks.length === targetSize * targetSize) {
           setMarks(saved.marks as CellState[]);
+          marksRef.current = saved.marks as CellState[];
           setCover(saved.cover ?? MAX_COVER);
           setHintsLeft(saved.hintsLeft ?? HINT_MAX);
           setElapsed(saved.elapsed ?? 0);
@@ -159,7 +163,9 @@ export default function App() {
           setStatusText(translate(settings.language, 'resumed'));
         } else {
           // Fresh board initialization
-          setMarks(Array(targetSize * targetSize).fill(0));
+          const emptyMarks = Array<CellState>(targetSize * targetSize).fill(0);
+          setMarks(emptyMarks);
+          marksRef.current = emptyMarks;
           setCover(MAX_COVER);
           setHintsLeft(HINT_MAX);
           setElapsed(0);
@@ -258,43 +264,48 @@ export default function App() {
   const handleCellDragMark = useCallback(
     (index: number, val: 0 | 1) => {
       if (isOver || isLoadingPuzzle) return;
-      if (marks[index] === 2) return; // Placed detective cannot be marked with ✕
+      if (marksRef.current[index] === 2) return; // Placed detective cannot be marked with ✕
 
-      pushUndo(marks);
-      const newMarks = [...marks];
+      const currentMarks = marksRef.current;
+      if (currentMarks[index] === val) return;
+      pushUndo(currentMarks);
+      const newMarks = [...currentMarks];
       newMarks[index] = val;
+      marksRef.current = newMarks;
       setMarks(newMarks);
-      if (val === 1 && marks[index] !== 1) {
+      if (val === 1) {
         setScore(prev => prev + 5);
       }
       sound.playMark();
     },
-    [isOver, isLoadingPuzzle, marks, pushUndo]
+    [isOver, isLoadingPuzzle, pushUndo]
   );
 
   // Action: Place Detective
   const handleCellPlace = useCallback(
     (index: number, fromHint = false) => {
       if (isOver || isLoadingPuzzle || !puzzle) return;
-      if (marks[index] === 2) return; // Already placed
+      if (marksRef.current[index] === 2) return; // Already placed
 
       const r = Math.floor(index / size);
       const c = index % size;
       const isCorrect = puzzle.solution[r] === c;
 
       if (isCorrect) {
-        pushUndo(marks);
-        const newMarks = [...marks];
+        const currentMarks = marksRef.current;
+        pushUndo(currentMarks);
+        const newMarks = [...currentMarks];
         newMarks[index] = 2;
+        marksRef.current = newMarks;
 
         const gained = combo ? 150 : 100;
         const nextScore = score + gained;
         setScore(nextScore);
         setCombo(true);
         if (combo) {
-          const effect = { index, id: Date.now() };
+          const effect = { index, id: ++comboEffectCounter.current };
           setComboCell(effect);
-          setTimeout(() => setComboCell(current => current?.id === effect.id ? null : current), 950);
+          setTimeout(() => setComboCell(current => current?.id === effect.id ? null : current), 1300);
         }
 
         setMarks(newMarks);
@@ -365,6 +376,7 @@ export default function App() {
         sound.playWrong();
         setScore(prev => prev - 5);
         setCombo(false);
+        setComboCell(null);
         const nextCover = cover - 1;
         setCover(nextCover);
 
@@ -372,9 +384,11 @@ export default function App() {
         setBadCell(index);
         setTimeout(() => setBadCell(null), 450);
 
-        pushUndo(marks);
-        const newMarks = [...marks];
+        const currentMarks = marksRef.current;
+        pushUndo(currentMarks);
+        const newMarks = [...currentMarks];
         newMarks[index] = 1; // mark as X
+        marksRef.current = newMarks;
         setMarks(newMarks);
 
         if (nextCover <= 0) {
@@ -414,6 +428,7 @@ export default function App() {
     const prev = undoStack[undoStack.length - 1];
     setUndoStack(u => u.slice(0, -1));
     setMarks(prev);
+    marksRef.current = prev;
     sound.playMark();
   }, [isOver, undoStack]);
 
@@ -465,7 +480,9 @@ export default function App() {
   // Action: Restart Case
   const handleRestartCase = useCallback(() => {
     storage.clearGameState(size, level);
-    setMarks(Array(size * size).fill(0));
+    const emptyMarks = Array<CellState>(size * size).fill(0);
+    setMarks(emptyMarks);
+    marksRef.current = emptyMarks;
     setCover(MAX_COVER);
     setHintsLeft(HINT_MAX);
     setElapsed(0);
@@ -490,20 +507,22 @@ export default function App() {
       setStatusText(translate(settings.language, 'autoClearEmpty'));
       return;
     }
-    const nextMarks = [...marks];
+    const currentMarks = marksRef.current;
+    const nextMarks = [...currentMarks];
     for (let i = 0; i < nextMarks.length; i++) {
       if (nextMarks[i] !== 0) continue;
       const r = Math.floor(i / size), c = i % size;
-      const impossible = marks.some((mark, placedIdx) => {
+      const impossible = currentMarks.some((mark, placedIdx) => {
         if (mark !== 2) return false;
         const pr = Math.floor(placedIdx / size), pc = placedIdx % size;
         return r === pr || c === pc || puzzle.regions[r][c] === puzzle.regions[pr][pc] || (Math.abs(r - pr) <= 1 && Math.abs(c - pc) <= 1);
       });
       if (impossible) nextMarks[i] = 1;
     }
-    pushUndo(marks);
+    pushUndo(currentMarks);
+    marksRef.current = nextMarks;
     setMarks(nextMarks);
-    const clearedCount = nextMarks.filter((mark, index) => mark === 1 && marks[index] !== 1).length;
+    const clearedCount = nextMarks.filter((mark, index) => mark === 1 && currentMarks[index] !== 1).length;
     setScore(prev => prev + clearedCount * 5);
     setAutoClearUsed(true);
     const remaining = autoClearCount - 1;
@@ -565,9 +584,6 @@ export default function App() {
             cover={cover}
             maxCover={MAX_COVER}
           />
-          <div className="w-full flex justify-between items-center px-1 text-xs font-bold text-[#6e4323]">
-            <span>{translate(settings.language, 'watson')} · {translate(settings.language, 'score')}: {effectiveScore}</span>
-          </div>
 
           {/* Board Frame */}
           <div className="w-full relative tablet-board">
@@ -583,12 +599,12 @@ export default function App() {
                 n={size}
                 regions={puzzle.regions}
                 marks={marks}
+                tool={tool}
                 comboCell={comboCell}
                 badCell={badCell}
                 hintCell={hintCell}
                 zoneCells={zoneCells}
                 threadEffect={threadEffect}
-                onCellClick={idx => handleCellDragMark(idx, marks[idx] === 1 ? 0 : 1)}
                 onCellDragMark={handleCellDragMark}
                 onCellPlace={handleCellPlace}
               />
