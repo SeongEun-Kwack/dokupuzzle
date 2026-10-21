@@ -1,331 +1,278 @@
-import React, { useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import { InkDefs, InkX, roughStrokePath } from './InkMarks';
-import { BoardSize, CellState, ThreadEffect } from '../types';
+import React, { forwardRef, useImperativeHandle, useRef, useMemo, useCallback } from 'react';
+import { InkDefs } from './InkMarks';
 import { PALETTE } from '../utils/puzzle';
+import type { CrosswordData, Dir, PlacedWord } from '../utils/puzzle';
 
-const DOUBLE_TAP_MS = 360;
-const LONG_PRESS_MS = 480;
+export interface Cursor { r: number; c: number; dir: Dir }
+
+/** 부모가 board.focus()를 호출할 수 있게 열어 주는 기능 */
+export interface BoardHandle { focus: () => void }
 
 interface BoardProps {
-  n: BoardSize;
-  regions: number[][];
-  marks: CellState[];
-  badCell: number | null;
+  data: CrosswordData;
+  input: string[][];
+  cursor: Cursor | null;
+  wrongCells: Set<number>;
   hintCell: number | null;
-  zoneCells: number[];
-  threadEffect: ThreadEffect | null;
   comboCell: { index: number; id: number } | null;
-  onCellDragMark: (index: number, val: 0 | 1) => void;
-  onCellPlace: (index: number) => void;
+  locked?: boolean;
+  onCursorChange: (c: Cursor) => void;
+  /** committed=false 이면 한글 조합 중 미리보기 (정답 판정 X) */
+  onCellInput: (r: number, c: number, ch: string, committed?: boolean) => void;
 }
 
-export const Board: React.FC<BoardProps> = ({
-  n,
-  regions,
-  marks,
-  badCell,
-  hintCell,
-  zoneCells,
-  threadEffect,
-  comboCell,
-  onCellDragMark,
-  onCellPlace
-}) => {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const marksRef = useRef(marks);
-  marksRef.current = marks;
-  const lastTapRef = useRef<{ i: number; t: number }>({ i: -1, t: 0 });
-  const pressRef = useRef<{
-    i: number;
-    val: 0 | 1;
-    dragging: boolean;
-    longPressed: boolean;
-    lastCell: number;
-    timer: ReturnType<typeof setTimeout> | null;
-  } | null>(null);
-  const suppressPointerUpRef = useRef(false);
-  const pendingClickRef = useRef<{ index: number; place: boolean; timer: ReturnType<typeof setTimeout> } | null>(null);
-  const actionRef = useRef({ onCellPlace, onCellDragMark });
-  actionRef.current = { onCellPlace, onCellDragMark };
+export function wordAt(words: PlacedWord[], r: number, c: number, dir: Dir) {
+  return words.find(w =>
+    w.dir === dir &&
+    (dir === 'across'
+      ? w.row === r && c >= w.col && c < w.col + w.answer.length
+      : w.col === c && r >= w.row && r < w.row + w.answer.length),
+  );
+}
 
-  const getRowCol = useCallback(
-    (index: number): [number, number] => {
-      return [Math.floor(index / n), index % n];
-    },
-    [n]
+const flip = (d: Dir): Dir => (d === 'across' ? 'down' : 'across');
+const lastChar = (s: string | null | undefined) => Array.from(s ?? '').pop() ?? '';
+
+export const Board = forwardRef<BoardHandle, BoardProps>(({
+  data, input, cursor, wrongCells, hintCell, comboCell, locked,
+  onCursorChange, onCellInput,
+}, ref) => {
+  const n = data.size;
+  const hiddenRef = useRef<HTMLInputElement>(null);
+  const composingRef = useRef(false);
+  const justComposedRef = useRef(false);
+  const cursorRef = useRef(cursor);
+  cursorRef.current = cursor;
+  const inputDataRef = useRef(input);
+  inputDataRef.current = input;
+
+  const isOpen = useCallback(
+    (r: number, c: number) => r >= 0 && c >= 0 && r < n && c < n && data.grid[r][c] !== null,
+    [data.grid, n],
   );
 
-  const executeTapAction = useCallback((index: number, place: boolean) => {
-    if (place) {
-      actionRef.current.onCellPlace(index);
-      return;
-    }
-    const current = marksRef.current[index];
-    if (current === 2) return;
-    const next: 0 | 1 = current === 1 ? 0 : 1;
-    const updated = [...marksRef.current];
-    updated[index] = next;
-    marksRef.current = updated;
-    actionRef.current.onCellDragMark(index, next);
-  }, []);
+  const setCursor = useCallback((next: Cursor) => {
+    cursorRef.current = next;
+    onCursorChange(next);
+  }, [onCursorChange]);
 
-  const applyMark = useCallback((index: number, val: 0 | 1) => {
-    if (marksRef.current[index] === 2 || marksRef.current[index] === val) return;
-    const updated = [...marksRef.current];
-    updated[index] = val;
-    marksRef.current = updated;
-    actionRef.current.onCellDragMark(index, val);
-  }, []);
+  const activeWord = useMemo(
+    () => (cursor ? wordAt(data.words, cursor.r, cursor.c, cursor.dir) ?? null : null),
+    [cursor, data.words],
+  );
 
-  const paintPath = useCallback((from: number, to: number, val: 0 | 1) => {
-    let x0 = from % n, y0 = Math.floor(from / n);
-    const x1 = to % n, y1 = Math.floor(to / n);
-    const dx = Math.abs(x1 - x0), sx = x0 < x1 ? 1 : -1;
-    const dy = -Math.abs(y1 - y0), sy = y0 < y1 ? 1 : -1;
-    let error = dx + dy;
-    while (true) {
-      applyMark(y0 * n + x0, val);
-      if (x0 === x1 && y0 === y1) break;
-      const twiceError = 2 * error;
-      if (twiceError >= dy) { error += dy; x0 += sx; }
-      if (twiceError <= dx) { error += dx; y0 += sy; }
-    }
-  }, [applyMark, n]);
+  const activeSet = useMemo(() => {
+    const s = new Set<number>();
+    activeWord?.answer.forEach((_, i) => {
+      const r = activeWord.row + (activeWord.dir === 'down' ? i : 0);
+      const c = activeWord.col + (activeWord.dir === 'across' ? i : 0);
+      s.add(r * n + c);
+    });
+    return s;
+  }, [activeWord, n]);
 
-  const moveStrokeTo = useCallback((index: number) => {
-    const press = pressRef.current;
-    if (!press || press.longPressed || press.i === index) return;
-    if (!press.dragging) {
-      if (press.timer) clearTimeout(press.timer);
-      press.dragging = true;
-      lastTapRef.current = { i: -1, t: 0 };
-      paintPath(press.i, index, press.val);
-    } else if (press.lastCell !== index) {
-      paintPath(press.lastCell, index, press.val);
-    }
-    press.lastCell = index;
-  }, [paintPath]);
+  /** 현재 방향으로 한 칸 이동 (단어 끝이면 멈춤) */
+  const step = useCallback((delta: 1 | -1) => {
+    const cur = cursorRef.current;
+    if (!cur) return false;
+    const r = cur.r + (cur.dir === 'down' ? delta : 0);
+    const c = cur.c + (cur.dir === 'across' ? delta : 0);
+    if (!isOpen(r, c)) return false;
+    setCursor({ ...cur, r, c });
+    return true;
+  }, [isOpen, setCursor]);
 
-  // Global pointer-up listener keeps touch and mouse strokes alive across cell boundaries.
-  useEffect(() => {
-    const handlePointerUp = () => {
-      if (suppressPointerUpRef.current) {
-        suppressPointerUpRef.current = false;
+  /** 방향키: 검은 칸은 건너뛰고 다음 열린 칸으로 */
+  const jump = useCallback((dr: number, dc: number) => {
+    const cur = cursorRef.current;
+    if (!cur) return;
+    let r = cur.r + dr, c = cur.c + dc;
+    while (r >= 0 && c >= 0 && r < n && c < n) {
+      if (isOpen(r, c)) {
+        const want: Dir = dr !== 0 ? 'down' : 'across';
+        const dir = wordAt(data.words, r, c, want) ? want : flip(want);
+        setCursor({ r, c, dir });
         return;
       }
-      const press = pressRef.current;
-      if (press) {
-        if (press.timer) clearTimeout(press.timer);
-        if (!press.dragging && !press.longPressed) {
-          if (pendingClickRef.current) {
-            clearTimeout(pendingClickRef.current.timer);
-            executeTapAction(pendingClickRef.current.index, pendingClickRef.current.place);
-          }
-          const index = press.i;
-          const timer = setTimeout(() => {
-            executeTapAction(index, false);
-            pendingClickRef.current = null;
-          }, DOUBLE_TAP_MS);
-          pendingClickRef.current = { index, place: false, timer };
+      r += dr; c += dc;
+    }
+  }, [data.words, isOpen, n, setCursor]);
+
+  const focusHidden = useCallback(() => {
+    const el = hiddenRef.current;
+    if (!el) return;
+    el.value = '';
+    el.focus({ preventScroll: true });
+  }, []);
+
+  // 부모에서 boardRef.current.focus() 로 키보드를 띄울 수 있게 함
+  useImperativeHandle(ref, () => ({ focus: focusHidden }), [focusHidden]);
+
+  const handleCellPointerDown = (e: React.PointerEvent, r: number, c: number) => {
+    e.preventDefault();
+    if (!isOpen(r, c)) return;
+    let dir: Dir = cursor?.dir ?? 'across';
+    if (cursor && cursor.r === r && cursor.c === c) dir = flip(dir);   // 같은 칸 다시 탭 → 방향 전환
+    if (!wordAt(data.words, r, c, dir)) dir = flip(dir);
+    setCursor({ r, c, dir });
+    focusHidden();
+  };
+
+  /* ── 한글 IME ── */
+  const onCompositionStart = () => { composingRef.current = true; };
+
+  const onCompositionUpdate = (e: React.CompositionEvent<HTMLInputElement>) => {
+    const cur = cursorRef.current;
+    if (!cur || locked) return;
+    onCellInput(cur.r, cur.c, lastChar(e.data), false);   // 미리보기
+  };
+
+  const onCompositionEnd = (e: React.CompositionEvent<HTMLInputElement>) => {
+    composingRef.current = false;
+    justComposedRef.current = true;
+    setTimeout(() => { justComposedRef.current = false; }, 0);
+    const cur = cursorRef.current;
+    if (!cur || locked) return;
+    const ch = lastChar(e.data);
+    onCellInput(cur.r, cur.c, ch, true);
+    if (ch) step(1);
+  };
+
+  /* ── 영어 등 조합 없는 입력 ── */
+  const onInput = (e: React.FormEvent<HTMLInputElement>) => {
+    const native = e.nativeEvent as InputEvent;
+    if (composingRef.current || native.isComposing) return;
+    const el = e.currentTarget;
+    if (justComposedRef.current) { el.value = ''; return; }
+    const ch = lastChar(el.value);
+    el.value = '';
+    const cur = cursorRef.current;
+    if (!cur || locked || !ch.trim()) return;
+    if (data.lang === 'en' && !/^[a-z]$/i.test(ch)) return;
+    onCellInput(cur.r, cur.c, ch.toUpperCase(), true);
+    step(1);
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (composingRef.current || e.nativeEvent.isComposing) return;
+    const cur = cursorRef.current;
+    if (!cur || locked) return;
+    switch (e.key) {
+      case 'Backspace': {
+        e.preventDefault();
+        if (inputDataRef.current[cur.r][cur.c]) {
+          onCellInput(cur.r, cur.c, '', true);
+        } else if (step(-1)) {
+          const prev = cursorRef.current!;
+          onCellInput(prev.r, prev.c, '', true);
         }
-        pressRef.current = null;
+        break;
       }
-    };
-    window.addEventListener('pointerup', handlePointerUp);
-    return () => {
-      window.removeEventListener('pointerup', handlePointerUp);
-      if (pressRef.current?.timer) clearTimeout(pressRef.current.timer);
-      if (pendingClickRef.current) clearTimeout(pendingClickRef.current.timer);
-    };
-  }, [executeTapAction]);
-
-  const handlePointerDown = (e: React.PointerEvent, index: number) => {
-    if (e.button === 2) return; // Right click handled by contextMenu
-
-    e.preventDefault();
-    const now = Date.now();
-    if (lastTapRef.current.i === index && now - lastTapRef.current.t < DOUBLE_TAP_MS) {
-      if (pendingClickRef.current) {
-        clearTimeout(pendingClickRef.current.timer);
-        pendingClickRef.current = null;
-      }
-      lastTapRef.current = { i: -1, t: 0 };
-      suppressPointerUpRef.current = true;
-      executeTapAction(index, true);
-      return;
+      case 'ArrowUp': e.preventDefault(); jump(-1, 0); break;
+      case 'ArrowDown': e.preventDefault(); jump(1, 0); break;
+      case 'ArrowLeft': e.preventDefault(); jump(0, -1); break;
+      case 'ArrowRight': e.preventDefault(); jump(0, 1); break;
+      case ' ':
+        e.preventDefault();
+        if (wordAt(data.words, cur.r, cur.c, flip(cur.dir))) setCursor({ ...cur, dir: flip(cur.dir) });
+        break;
     }
-    if (pendingClickRef.current) {
-      clearTimeout(pendingClickRef.current.timer);
-      executeTapAction(pendingClickRef.current.index, pendingClickRef.current.place);
-      pendingClickRef.current = null;
-    }
-    if (marksRef.current[index] === 2) return;
-
-    lastTapRef.current = { i: index, t: now };
-    const targetVal: 0 | 1 = marksRef.current[index] === 1 ? 0 : 1;
-    const press = { i: index, val: targetVal, dragging: false, longPressed: false, lastCell: index, timer: null as ReturnType<typeof setTimeout> | null };
-    press.timer = setTimeout(() => {
-      if (pressRef.current !== press || press.dragging) return;
-      press.longPressed = true;
-      lastTapRef.current = { i: -1, t: 0 };
-      executeTapAction(index, true);
-    }, LONG_PRESS_MS);
-    pressRef.current = press;
-    containerRef.current?.setPointerCapture(e.pointerId);
   };
-
-  const handlePointerEnter = (index: number) => {
-    moveStrokeTo(index);
-  };
-
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!pressRef.current || pressRef.current.longPressed || !containerRef.current) return;
-    const bounds = containerRef.current.getBoundingClientRect();
-    if (e.clientX < bounds.left || e.clientX >= bounds.right || e.clientY < bounds.top || e.clientY >= bounds.bottom) return;
-    const col = Math.min(n - 1, Math.floor(((e.clientX - bounds.left) / bounds.width) * n));
-    const row = Math.min(n - 1, Math.floor(((e.clientY - bounds.top) / bounds.height) * n));
-    moveStrokeTo(row * n + col);
-  };
-
-  const handleContextMenu = (e: React.MouseEvent, index: number) => {
-    e.preventDefault();
-    executeTapAction(index, true);
-  };
-
-  const threadPaths = useMemo(() => {
-    if (!threadEffect) return null;
-    const cx = ((threadEffect.c + 0.5) / n) * 1000;
-    const cy = ((threadEffect.r + 0.5) / n) * 1000;
-    const seed = threadEffect.r * 131 + threadEffect.c * 17 + 1;
-    return {
-      cx,
-      cy,
-      h: roughStrokePath(seed, cy, 7),
-      hPass: roughStrokePath(seed + 7, cy + 1.6, 3.5),
-      v: roughStrokePath(seed + 3, cx, 7, true),
-      vPass: roughStrokePath(seed + 11, cx - 1.6, 3.5, true)
-    };
-  }, [threadEffect, n]);
-
 
   return (
     <div className="board-frame p-2 sm:p-2.5 md:p-3.5 rounded-2xl w-full max-w-[min(100%,460px)] md:max-w-[560px] lg:max-w-[620px] mx-auto shadow-2xl relative select-none">
-      <InkDefs /> 
+      <InkDefs />
       <div
-        ref={containerRef}
-        onPointerMove={handlePointerMove}
         className="relative w-full aspect-square rounded-lg overflow-hidden bg-[#2a170a] shadow-inner touch-none"
         style={{
           display: 'grid',
           gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))`,
-          gridTemplateRows: `repeat(${n}, minmax(0, 1fr))`
+          gridTemplateRows: `repeat(${n}, minmax(0, 1fr))`,
         }}
       >
         {Array.from({ length: n * n }, (_, idx) => {
-          const [r, c] = getRowCol(idx);
-          const regionIdx = regions[r] ? regions[r][c] : 0;
-          const cellMark = marks[idx] ?? 0;
-          const bgCol = PALETTE[regionIdx % PALETTE.length];
+          const r = Math.floor(idx / n);
+          const c = idx % n;
+          const open = data.grid[r][c] !== null;
 
-          const isThickTop = r > 0 && regions[r - 1]?.[c] !== regionIdx;
-          const isThickBottom = r < n - 1 && regions[r + 1]?.[c] !== regionIdx;
-          const isThickLeft = c > 0 && regions[r]?.[c - 1] !== regionIdx;
-          const isThickRight = c < n - 1 && regions[r]?.[c + 1] !== regionIdx;
+          if (!open) {
+            return (
+              <div key={idx} style={{
+                backgroundColor: '#2a170a',
+                backgroundImage: 'repeating-linear-gradient(100deg, rgba(255,255,255,0.03) 0 2px, transparent 2px 7px)',
+              }} />
+            );
+          }
 
-          const isBad = badCell === idx;
+          const num = data.numbers[r][c];
+          const val = input[r]?.[c] ?? '';
+          const isSel = cursor?.r === r && cursor?.c === c;
+          const isActive = activeSet.has(idx);
+          const isWrong = wrongCells.has(idx);
           const isHint = hintCell === idx;
-          const isZone = zoneCells.includes(idx);
 
           return (
             <div
               key={idx}
-              data-index={idx}
-              onPointerDown={e => handlePointerDown(e, idx)}
-              onPointerEnter={() => handlePointerEnter(idx)}
-              onContextMenu={e => handleContextMenu(e, idx)}
-              className={`relative flex items-center justify-center cursor-pointer transition-colors duration-150 ${isBad ? 'animate-shake' : ''} ${comboCell?.index === idx ? 'combo-burst-cell' : ''}`}
+              onPointerDown={e => handleCellPointerDown(e, r, c)}
+              className={`relative flex items-center justify-center cursor-pointer transition-colors duration-150 ${isWrong ? 'animate-shake' : ''} ${comboCell?.index === idx ? 'combo-burst-cell' : ''}`}
               style={{
-                backgroundColor: bgCol,
-                backgroundImage:
-                  'repeating-linear-gradient(100deg, rgba(0,0,0,0.035) 0 2px, transparent 2px 7px), linear-gradient(160deg, rgba(255,255,255,0.22), rgba(0,0,0,0.12))',
-                borderTop: isThickTop ? '2.5px solid #2a170a' : '1px solid rgba(42,23,10,0.22)',
-                borderBottom: isThickBottom ? '2.5px solid #2a170a' : '1px solid rgba(42,23,10,0.22)',
-                borderLeft: isThickLeft ? '2.5px solid #2a170a' : '1px solid rgba(42,23,10,0.22)',
-                borderRight: isThickRight ? '2.5px solid #2a170a' : '1px solid rgba(42,23,10,0.22)',
-                boxShadow: isBad
-                  ? 'inset 0 0 0 999px rgba(184, 50, 42, 0.75)'
+                backgroundColor: isSel ? PALETTE[5] : isActive ? '#dcc79a' : PALETTE[6],
+                backgroundImage: 'repeating-linear-gradient(100deg, rgba(0,0,0,0.035) 0 2px, transparent 2px 7px), linear-gradient(160deg, rgba(255,255,255,0.22), rgba(0,0,0,0.12))',
+                border: '1px solid rgba(42,23,10,0.35)',
+                boxShadow: isWrong
+                  ? 'inset 0 0 0 999px rgba(184, 50, 42, 0.55)'
                   : isHint
                   ? 'inset 0 0 0 4px #ffd34d, inset 0 0 16px rgba(255, 211, 77, 0.95)'
-                  : isZone
-                  ? 'inset 0 0 0 999px rgba(40, 20, 5, 0.32)'
-                  : undefined
+                  : isSel
+                  ? 'inset 0 0 0 2px #2a170a'
+                  : undefined,
               }}
             >
-              {/* Mark */}
-              {cellMark === 1 && (
-                <InkX
-                  seed={idx}
-                  className="pointer-events-none"
-                  style={{ width: n <= 6 ? '60%' : '64%', height: n <= 6 ? '60%' : '64%' }}
-                />
+              {num !== null && (
+                <span className="absolute top-[2px] left-[3px] leading-none font-bold text-[#2a170a]/80 pointer-events-none"
+                  style={{ fontSize: 'clamp(7px, 1.6vw, 11px)' }}>
+                  {num}
+                </span>
               )}
-
-
-
-              {/* Detective Placed Chip */}
-              {cellMark === 2 && (
-                <div className="coin-flip absolute inset-[6%] flex items-center justify-center pointer-events-none" aria-label="221B coin">
-                  <img className="coin-face coin-back" src="/assets/coins/coin_back.png" alt="" draggable={false} />
-                  <img className="coin-face coin-front" src="/assets/coins/coin_front.png" alt="" draggable={false} />
-                </div>
-              )}
+              <span className="font-bold text-[#2a170a] pointer-events-none"
+                style={{ fontSize: data.lang === 'ko' ? 'clamp(14px, 4.2vw, 28px)' : 'clamp(14px, 4.6vw, 30px)' }}>
+                {val}
+              </span>
               {comboCell?.index === idx && (
                 <div key={comboCell.id} className="combo-particles" aria-hidden="true">
-                  {Array.from({ length: 10 }, (_, particle) => <i key={particle} />)}
+                  {Array.from({ length: 10 }, (_, p) => <i key={p} />)}
                 </div>
               )}
             </div>
           );
         })}
 
-        {/* Thread Deduction Visual Effects */}
-        {threadEffect && threadPaths && (
-          <>
-            <svg
-              className="absolute inset-0 w-full h-full pointer-events-none z-20"
-              viewBox="0 0 1000 1000"
-              preserveAspectRatio="none"
-              aria-hidden="true"
-            >
-              <g filter="url(#ink-line)" fill="#8e2a22">
-                <g
-                  className="thread-h"
-                  style={{ transformBox: 'view-box', transformOrigin: `${threadPaths.cx}px ${threadPaths.cy}px` }}
-                >
-                  <path d={threadPaths.h} opacity="0.85" />
-                  <path d={threadPaths.hPass} opacity="0.35" />
-                </g>
-                <g
-                  className="thread-v"
-                  style={{ transformBox: 'view-box', transformOrigin: `${threadPaths.cx}px ${threadPaths.cy}px` }}
-                >
-                  <path d={threadPaths.v} opacity="0.85" />
-                  <path d={threadPaths.vPass} opacity="0.35" />
-                </g>
-              </g>
-            </svg>
-            {/* Gold map pin */}
-            <div
-              className="absolute w-3.5 h-3.5 -mt-[7px] -ml-[7px] rounded-full pointer-events-none shadow-[0_2px_4px_rgba(0,0,0,0.6)] z-30 pin-drop"
-              style={{
-                top: `${((threadEffect.r + 0.5) / n) * 100}%`,
-                left: `${((threadEffect.c + 0.5) / n) * 100}%`,
-                background: 'radial-gradient(circle at 35% 35%, #fff0c0, #c9a24a 50%, #6b4a12)'
-              }}
-            />
-          </>
-        )}
+        {/* 모바일 키보드 + IME용 숨김 input */}
+        <input
+          ref={hiddenRef}
+          type="text"
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize={data.lang === 'en' ? 'characters' : 'off'}
+          spellCheck={false}
+          lang={data.lang}
+          aria-label="crossword input"
+          onCompositionStart={onCompositionStart}
+          onCompositionUpdate={onCompositionUpdate}
+          onCompositionEnd={onCompositionEnd}
+          onInput={onInput}
+          onKeyDown={onKeyDown}
+          className="absolute opacity-0 pointer-events-none"
+          style={{
+            width: 1, height: 1, fontSize: 16,
+            top: cursor ? `${(cursor.r / n) * 100}%` : 0,
+            left: cursor ? `${(cursor.c / n) * 100}%` : 0,
+          }}
+        />
       </div>
     </div>
   );
-};
+});
+
+Board.displayName = 'Board';

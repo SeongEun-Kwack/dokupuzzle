@@ -4,7 +4,7 @@ export type CellState = 0 | 1 | 2; // 0: Empty, 1: X (Elimination), 2: Detective
 
 export type Language = 'ko' | 'en';
 
-export interface PuzzleData {
+export interface CrosswordData {
   regions: number[][]; // [r][c] => regionIndex (0..n-1)
   solution: number[];  // solution[r] = col
   level: number;       // 1: Observation, 2: Deduction, 3: Elimination
