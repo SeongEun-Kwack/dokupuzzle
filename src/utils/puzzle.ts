@@ -23,7 +23,11 @@ export function queensConflict(regions: number[][], a: Cell, b: Cell, hardMode =
   const [r1, c1] = a;
   const [r2, c2] = b;
   if (r1 === r2 && c1 === c2) return true;
-  const sameLongDiagonal = hardMode && Math.abs(r1 - r2) === Math.abs(c1 - c2);
+  const n = regions.length;
+  const sameLongDiagonal = hardMode && (
+    (r1 === c1 && r2 === c2) ||
+    (r1 + c1 === n - 1 && r2 + c2 === n - 1)
+  );
   return r1 === r2 || c1 === c2 || regions[r1][c1] === regions[r2][c2] || cellsTouch(r1, c1, r2, c2) || sameLongDiagonal;
 }
 
@@ -69,7 +73,10 @@ function randomPlacement(n: number, rng: () => number, hardMode = false): number
     if (row === n) return true;
     for (const col of shuffle(Array.from({ length: n }, (_, i) => i), rng)) {
       if (usedColumns[col] || (row > 0 && cellsTouch(row, col, row - 1, placement[row - 1])) ||
-        (hardMode && placement.some((prevCol, prevRow) => Math.abs(row - prevRow) === Math.abs(col - prevCol)))) continue;
+        (hardMode && placement.some((prevCol, prevRow) =>
+          (row === col && prevRow === prevCol) ||
+          (row + col === n - 1 && prevRow + prevCol === n - 1)
+        ))) continue;
       usedColumns[col] = true;
       placement[row] = col;
       if (search(row + 1)) return true;

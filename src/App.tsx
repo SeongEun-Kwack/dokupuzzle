@@ -53,7 +53,7 @@ export default function App() {
   const marksRef = useRef(marks);
   marksRef.current = marks;
   const [cover, setCover] = useState<number>(MAX_COVER);
-  const [hintsLeft, setHintsLeft] = useState<number>(HINT_MAX);
+  const [hintsLeft, setHintsLeft] = useState<number>(() => storage.loadHintInventory());
   const [elapsed, setElapsed] = useState<number>(0);
   const [score, setScore] = useState<number>(0);
   const scoreRef = useRef(0);
@@ -78,6 +78,7 @@ export default function App() {
   // Modals
   const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
   const [isTutorialOpen, setIsTutorialOpen] = useState<boolean>(false);
+  const [showHardTutorialOnly, setShowHardTutorialOnly] = useState(false);
   const [isDossierOpen, setIsDossierOpen] = useState<boolean>(false);
   const [resultModalType, setResultModalType] = useState<'win' | 'fail' | null>(null);
   const [isRestartConfirmOpen, setIsRestartConfirmOpen] = useState(false);
@@ -116,6 +117,10 @@ export default function App() {
         setHardRecords(storage.loadHardRecords(activeSize));
         setAutoClearCount(storage.loadAutoClearInventory());
         setScene('main');
+        if (storage.loadEndingUnlocked(activeSize)) {
+          setShowHardTutorialOnly(true);
+          setIsTutorialOpen(true);
+        }
       }
     }, 90);
   };
@@ -162,7 +167,7 @@ export default function App() {
       setMarks(emptyMarks);
       marksRef.current = emptyMarks;
       setCover(MAX_COVER);
-      setHintsLeft(HINT_MAX);
+      setHintsLeft(storage.loadHintInventory());
       setElapsed(0);
       setScore(0);
       scoreRef.current = 0;
@@ -227,7 +232,7 @@ export default function App() {
     scoreRef.current = 0;
     setElapsed(0);
     setCover(MAX_COVER);
-    setHintsLeft(HINT_MAX);
+    setHintsLeft(storage.loadHintInventory());
     setIsOver(false);
     setLevel(targetLevel);
   }, [size]);
@@ -374,6 +379,9 @@ export default function App() {
           const nextInventory = Math.min(MAX_AUTO_CLEAR, storage.loadAutoClearInventory() + 1);
           storage.saveAutoClearInventory(nextInventory);
           setAutoClearCount(nextInventory);
+          const nextHintInventory = Math.min(HINT_MAX, storage.loadHintInventory() + 1);
+          storage.saveHintInventory(nextHintInventory);
+          setHintsLeft(nextHintInventory);
 
           if (hardMode) setHardRecords(storage.loadHardRecords(size));
           else setRecords(storage.loadLevelRecords(size));
@@ -484,6 +492,7 @@ export default function App() {
 
     sound.playHint();
     setHintsLeft(h => h - 1);
+    storage.saveHintInventory(hintsLeft - 1);
     setHintCell(bestCell);
     setTimeout(() => setHintCell(null), 1200);
 
@@ -498,7 +507,7 @@ export default function App() {
     setMarks(emptyMarks);
     marksRef.current = emptyMarks;
     setCover(MAX_COVER);
-    setHintsLeft(HINT_MAX);
+    setHintsLeft(storage.loadHintInventory());
     setElapsed(0);
     setScore(0);
     scoreRef.current = 0;
@@ -582,6 +591,7 @@ export default function App() {
     setIsLoadingPuzzle(false);
     setCover(MAX_COVER);
     setHintsLeft(HINT_MAX);
+    storage.saveHintInventory(HINT_MAX);
     setElapsed(0);
     setScore(0);
     scoreRef.current = 0;
@@ -708,7 +718,7 @@ export default function App() {
             return updated;
           });
         }}
-        onOpenTutorial={() => setIsTutorialOpen(true)}
+        onOpenTutorial={() => { setShowHardTutorialOnly(false); setIsTutorialOpen(true); }}
         onRestartCase={handleRestartCase}
         onResetAllData={handleResetAllData}
       />
@@ -739,8 +749,11 @@ export default function App() {
       <TutorialModal
         isOpen={isTutorialOpen}
         language={settings.language}
+        hardModeUnlocked={hardUnlocked}
+        hardModeOnly={showHardTutorialOnly}
         onClose={() => {
           setIsTutorialOpen(false);
+          setShowHardTutorialOnly(false);
           setSettings(s => ({ ...s, tutorialCompleted: true }));
           storage.saveSettings({ tutorialCompleted: true });
         }}

@@ -85,6 +85,10 @@ export const DICTIONARY = {
         p: '<b>짧게 터치/클릭</b>하면 ✕를 표시하고, <b>길게 누르거나 더블터치</b>하면 탐정을 배치합니다. 드래그로 연속 소거할 수 있습니다. 실수할 때마다 명성이 감소하며 3번 실수 시 사건이 미궁에 빠집니다.'
       }
     ],
+    hardTut: {
+      h: '5. 하드 모드: 긴 대각선 제한',
+      p: '기본 규칙에 더해, <b>두 개의 긴 대각선</b>(좌상단↘우하단, 우상단↙좌하단)에 탐정을 각각 <b>한 명 이하</b>로 배치해야 합니다. 하드 모드는 엔딩을 본 보드 크기에서 수사 일지를 통해 선택할 수 있습니다.'
+    },
     solved: '사건 해결!',
     time: '소요 시간',
     fame: '남은 명성',
@@ -220,6 +224,10 @@ export const DICTIONARY = {
         p: '<b>Short tap/click</b> to mark ✕; <b>long press or double-tap</b> to place a detective. Drag to eliminate continuously. 3 mistakes will freeze the case.'
       }
     ],
+    hardTut: {
+      h: '5. Hard Mode: Long Diagonal Limit',
+      p: 'In addition to the standard rules, place <b>at most one detective on each long diagonal</b> (top-left to bottom-right and top-right to bottom-left). Hard Mode is available from the case dossier after viewing that board size’s ending.'
+    },
     solved: 'Case Solved!',
     time: 'Time',
     fame: 'Fame Left',

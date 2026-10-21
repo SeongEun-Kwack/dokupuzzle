@@ -7,6 +7,8 @@ import { PALETTE } from '../utils/puzzle';
 interface TutorialModalProps {
   isOpen: boolean;
   language: Language;
+  hardModeUnlocked?: boolean;
+  hardModeOnly?: boolean;
   onClose: () => void;
 }
 
@@ -35,13 +37,20 @@ const SLIDES_CONFIG: MiniSlide[] = [
 export const TutorialModal: React.FC<TutorialModalProps> = ({
   isOpen,
   language,
+  hardModeUnlocked = false,
+  hardModeOnly = false,
   onClose
 }) => {
   const [step, setStep] = useState(0);
 
   if (!isOpen) return null;
 
-  const steps = DICTIONARY[language]?.tut || DICTIONARY.ko.tut;
+  const baseSteps = DICTIONARY[language]?.tut || DICTIONARY.ko.tut;
+  const steps = hardModeOnly
+    ? [DICTIONARY[language]?.hardTut || DICTIONARY.ko.hardTut]
+    : hardModeUnlocked
+    ? [...baseSteps, DICTIONARY[language]?.hardTut || DICTIONARY.ko.hardTut]
+    : baseSteps;
   const currentStep = steps[step] || steps[0];
   const slideConfig = SLIDES_CONFIG[step] || SLIDES_CONFIG[0];
 
@@ -100,6 +109,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
               const isBad = slideConfig.bad?.includes(idx);
               const isHl = slideConfig.hl?.includes(idx);
               const isZone = slideConfig.zone?.includes(idx);
+              const isHardDiagonal = (hardModeOnly || (hardModeUnlocked && step === baseSteps.length)) && (r === c || r + c === 3);
               const hasX = slideConfig.x?.includes(idx);
 
               return (
@@ -116,6 +126,8 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
                       ? 'inset 0 0 0 999px rgba(184, 50, 42, 0.65)'
                       : isHl
                       ? 'inset 0 0 0 999px rgba(184, 50, 42, 0.3)'
+                      : isHardDiagonal
+                      ? 'inset 0 0 0 999px rgba(255, 205, 74, 0.48)'
                       : isZone
                       ? 'inset 0 0 0 999px rgba(40, 20, 5, 0.35)'
                       : undefined
