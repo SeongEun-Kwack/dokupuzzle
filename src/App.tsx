@@ -1,7 +1,3 @@
-@ -1,6 +1,727 @@
-<<<<<<< HEAD
-import { CrosswordGame } from './components/CrosswordGame';
-=======
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   BoardSize,
@@ -28,13 +24,9 @@ import { OrientationLock } from './components/OrientationLock';
 const MAX_COVER = 3;
 const HINT_MAX = 3;
 const MAX_AUTO_CLEAR = 5;
->>>>>>> parent of 40664f2 (fix: 정답이 50/50% 일 경우 regenerated)
 
 /** Keep the standard App entry pointed at the active crossword game. */
 export default function App() {
-<<<<<<< HEAD
-  return <CrosswordGame />;
-=======
   const [scene, setScene] = useState<'title' | 'loading' | 'main' | 'ending'>('title');
   const [loadProgress, setLoadProgress] = useState(0);
   // Settings
@@ -724,5 +716,4 @@ export default function App() {
       <OrientationLock language={settings.language} />
     </div>
   );
->>>>>>> parent of 40664f2 (fix: 정답이 50/50% 일 경우 regenerated)
 }
