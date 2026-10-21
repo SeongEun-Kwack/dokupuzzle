@@ -3,9 +3,29 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 
+const assetVersion = '1.1.1021';
+
 export default defineConfig(() => {
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [
+      react(),
+      tailwindcss(),
+      {
+        name: 'version-built-assets',
+        apply: 'build',
+        enforce: 'post',
+        generateBundle(_options, bundle) {
+          for (const output of Object.values(bundle)) {
+            if (output.type !== 'chunk') continue;
+
+            output.code = output.code.replace(
+              /(["'])((?:\.\/|\/)?[^"']+\.css)(?:\?[^"']*)?\1/g,
+              (_match, quote: string, asset: string) => `${quote}${asset}?v=${assetVersion}${quote}`,
+            );
+          }
+        },
+      },
+    ],
     resolve: {
       alias: {
         '@': path.resolve(__dirname, '.'),
