@@ -41,6 +41,7 @@ export default function App() {
   const [maxUnlocked, setMaxUnlocked] = useState<number>(() => storage.loadProgress(size));
   const [records, setRecords] = useState<LevelRecord[]>(() => storage.loadLevelRecords(size));
   const [hardUnlocked, setHardUnlocked] = useState(() => storage.loadEndingUnlocked(size));
+  const [showEndingAfterClear, setShowEndingAfterClear] = useState(false);
   const [hardMaxUnlocked, setHardMaxUnlocked] = useState(() => storage.loadHardProgress(size));
   const [hardRecords, setHardRecords] = useState<LevelRecord[]>(() => storage.loadHardRecords(size));
 
@@ -217,6 +218,7 @@ export default function App() {
 
   // Action: Switch Case (Prev / Next or selection from Dossier) - resets marks and board state immediately
   const switchCase = useCallback((targetLevel: number) => {
+    setShowEndingAfterClear(false);
     const emptyMarks = Array<CellState>(size * size).fill(0);
     setMarks(emptyMarks);
     marksRef.current = emptyMarks;
@@ -361,6 +363,11 @@ export default function App() {
           } else {
             storage.saveProgress(size, nextLevel);
             setMaxUnlocked(storage.loadProgress(size));
+            if (level === 16) {
+              if (!hardUnlocked) setShowEndingAfterClear(true);
+              storage.saveEndingUnlocked(size);
+              setHardUnlocked(true);
+            }
           }
 
           const finalScore = Math.max(0, settledScore - Math.max(0, Math.floor(elapsed / 1000) - 180));
@@ -580,6 +587,7 @@ export default function App() {
     setMaxUnlocked(1);
     setRecords([]);
     setHardUnlocked(false);
+    setShowEndingAfterClear(false);
     setHardMaxUnlocked(1);
     setHardRecords([]);
 
@@ -625,7 +633,7 @@ export default function App() {
     <div className="scene-card"><p className="scene-kicker">221B BAKER STREET</p><h1>{translate(settings.language, 'title')}</h1><p>{translate(settings.language, 'subTitle')}</p><p className="scene-prompt">{translate(settings.language, 'startAdventure')}</p><span className="scene-actor">{translate(settings.language, 'watson')}</span></div>
   </div>;
   if (scene === 'loading') return <div className="scene-shell scene-loading"><div className="scene-card"><p className="scene-kicker">SHERLOCK & WATSON</p><h1>{translate(settings.language, 'loadingTitle')}</h1><p>{loadProgress < 100 ? translate(settings.language, 'integrity') : translate(settings.language, 'loadingDone')}</p><div className="loading-track"><span style={{ width: `${loadProgress}%` }} /></div><strong>{loadProgress}%</strong></div></div>;
-  if (scene === 'ending') return <div className="scene-shell scene-ending"><div className="scene-card"><p className="scene-kicker">DR. JOHN H. WATSON</p><h1>{translate(settings.language, 'endingTitle')}</h1><p className="ending-quote">“{translate(settings.language, 'endingText')}”</p>{hardUnlocked && <p className="text-[#ffd88a] mb-5">{settings.language === 'ko' ? `${size}×${size} 하드 모드가 해금되었습니다.` : `${size}×${size} Hard Mode unlocked.`}</p>}<button className="wood-button scene-return" onClick={() => { setHardMode(false); setLevel(1); setScene('title'); }}>{translate(settings.language, 'returnTitle')}</button></div></div>;
+  if (scene === 'ending') return <div className="scene-shell scene-ending"><div className="scene-card"><p className="scene-kicker">DR. JOHN H. WATSON</p><h1>{translate(settings.language, 'endingTitle')}</h1><p className="ending-quote">“{translate(settings.language, 'endingText')}”</p>{hardUnlocked && <p className="text-[#ffd88a] mb-5">{settings.language === 'ko' ? `${size}×${size} 하드 모드가 해금되었습니다.` : `${size}×${size} Hard Mode unlocked.`}</p>}<button className="wood-button scene-return" onClick={() => { setHardMode(true); setLevel(1); storage.saveActiveCase(size, 1); setScene('title'); }}>{translate(settings.language, 'returnTitle')}</button></div></div>;
 
   const effectiveScore = Math.max(0, score - Math.max(0, Math.floor(elapsed / 1000) - 180));
 
@@ -772,7 +780,8 @@ export default function App() {
         hintsUsed={HINT_MAX - hintsLeft}
         onNextCase={() => {
           setResultModalType(null);
-          if (level >= 16 && !hardMode) {
+          if (level === 16 && !hardMode && showEndingAfterClear) {
+            setShowEndingAfterClear(false);
             storage.saveEndingUnlocked(size);
             setHardUnlocked(true);
             setScene('ending');
@@ -784,7 +793,7 @@ export default function App() {
           handleRestartCase();
           setStatusText(translate(settings.language, 'retryMsg'));
         }}
-        onClose={() => setResultModalType(null)}
+        onClose={() => { setResultModalType(null); setShowEndingAfterClear(false); }}
       />
 
       {/* Case Dossier Modal (opened by tapping CASE title) */}
