@@ -1,6 +1,6 @@
 import { BoardSize, PuzzleData } from '../types';
 
-export const REGION_COLORS = [
+export const PALETTE = [
   "#9a5546", // 버건디 벽돌
   "#7f8b5e", // 모스 그린
   "#5f7487", // 슬레이트 블루
