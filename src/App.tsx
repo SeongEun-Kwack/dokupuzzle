@@ -7,7 +7,7 @@ import {
   ThreadEffect,
   UserSettings
 } from './types';
-import { generatePuzzle } from './utils/puzzle';
+import { usePuzzle } from './utils/puzzle';
 import { sound } from './utils/audio';
 import { storage } from './utils/storage';
 import { DICTIONARY, translate } from './utils/i18n';
@@ -141,7 +141,7 @@ export default function App() {
 
       // Async generation to avoid blocking UI frame
       setTimeout(() => {
-        const p = generatePuzzle(targetSize, targetLevel);
+        const p = usePuzzle(targetSize, targetLevel);
         setPuzzle(p);
 
         // Check if there is an in-progress saved game state in localStorage
