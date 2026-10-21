@@ -1,100 +1,78 @@
-// puzzle.ts — 십자말풀이 생성기 (8x8 기본)
+import { BoardSize, PuzzleData } from '../types';
 
 export const PALETTE = [
-  "#9a5546", "#7f8b5e", "#5f7487", "#76628a", "#527c78",
-  "#b8924a", "#c7b08a", "#4a5670", "#8a6a4f",
+  "#9a5546", // 버건디 벽돌
+  "#7f8b5e", // 모스 그린
+  "#5f7487", // 슬레이트 블루
+  "#76628a", // 플럼
+  "#527c78", // 딥 틸
+  "#b8924a", // 머스터드
+  "#c7b08a", // 양피지
+  "#4a5670", // 네이비
+  "#8a6a4f", // 담배잎 브라운
 ];
 
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
 /* ───────────────── 타입 ───────────────── */
+=======
+/* =========================================================================
+ * 게임 규칙 (유일한 기준)
+ * 생성기, 유일해 검사, 논리 풀이, UI 정답 판정이 모두 이 함수만 쓴다.
+ * 규칙을 바꿔야 하면 여기만 고치면 된다.
+ *   - 같은 행 X / 같은 열 X / 같은 색 영역 X
+ *   - 대각선 포함 8방향으로 닿으면 X
+ * ========================================================================= */
+export type Cell = readonly [number, number];
+>>>>>>> parent of 1d6e9c5 (feat: swap puzzle to crossword)
 
-export type Lang = 'ko' | 'en';
-export type Dir = 'across' | 'down';
-
-export interface WordEntry {
-  id?: string;
-  answer: string;
-  clue: string;
-  hint?: string;        // 영어: 한국어 뜻 / 한국어: 분류
-  category?: string;
-  difficulty?: number;  // 1~3
+export function cellsTouch(r1: number, c1: number, r2: number, c2: number): boolean {
+  return Math.abs(r1 - r2) <= 1 && Math.abs(c1 - c2) <= 1;
 }
 
-export interface PlacedWord {
-  id: number;
-  number: number;     // 칸에 표시될 번호
-  dir: Dir;
-  row: number;
-  col: number;
-  answer: string[];   // 칸 단위로 쪼갠 정답
-  clue: string;
-  hint?: string;
+export function queensConflict(regions: number[][], a: Cell, b: Cell): boolean {
+  const [r1, c1] = a;
+  const [r2, c2] = b;
+  if (r1 === r2 && c1 === c2) return true; // 같은 칸에 두 번 놓는 것도 위반
+  return (
+    r1 === r2 ||
+    c1 === c2 ||
+    regions[r1][c1] === regions[r2][c2] ||
+    cellsTouch(r1, c1, r2, c2)
+  );
 }
 
-export interface CrosswordData {
-  size: number;
-  lang: Lang;
-  level: number;
-  grid: (string | null)[][];      // null = 검은 칸
-  numbers: (number | null)[][];   // 시작 칸 번호
-  words: PlacedWord[];
-}
-
-export function bankForLevel(bank: WordEntry[], level: number): WordEntry[] {
-  const maxD = level <= 10 ? 1 : level <= 30 ? 2 : 3;
-  const pool = bank.filter(w => (w.difficulty ?? 1) <= maxD);
-  return pool.length >= 40 ? pool : bank;   // 단어가 모자라면 전체 사용
-}
-
-
-/* ───────────────── UI 문구 (ko / en) ───────────────── */
-
-export const UI_TEXT = {
-   ko: {
-    title: '십자말풀이', across: '가로', down: '세로', check: '정답 확인',
-    reveal: '한 칸 공개', hint: '힌트 보기', hideHint: '힌트 숨기기', reset: '초기화',
-    retry: '다시 풀기', next: '다음 레벨', solved: '완성했어요!', wrong: '틀린 칸이 있어요',
-    empty: '빈칸이 남았어요', time: '시간', level: '레벨', loading: '불러오는 중…',
-    pickCell: '칸을 눌러 시작하세요',
-  },
-  en: {
-    title: 'Crossword', across: 'Across', down: 'Down', check: 'Check',
-    reveal: 'Reveal cell', hint: 'Show hint', hideHint: 'Hide hint', reset: 'Reset',
-    retry: 'Retry', next: 'Next level', solved: 'Solved!', wrong: 'Some cells are wrong',
-    empty: 'Some cells are empty', time: 'Time', level: 'Level', loading: 'Loading…',
-    pickCell: 'Tap a cell to start',
-  },
-} as const;
-
-/* ───────────────── 단어 은행 ───────────────── */
-
-
-export function generateCrossword(
-  lang: Lang, level: number, bank: WordEntry[], n = 8, salt = 0,
-): CrosswordData {
-  if (!bank.length) throw new Error(`단어 은행이 비어 있어요 (${lang})`);
-  const seed = n * 100003 + level * 7919 + (lang === 'en' ? 104729 : 0) + salt * 15485863;
-  const rng = mulberry32(seed);
-
-  const target = Math.min(14, 6 + Math.floor(level / 2));
-
-  let best = buildOnce(n, bank, target, rng);
-  for (let i = 0; i < 300 && best.placed.length < target; i++) {
-    const t = buildOnce(n, bank, target, rng);
-    if (t.score > best.score) best = t;
+/** UI 정답 판정용. 게임 화면에서도 반드시 이 함수를 쓸 것. */
+export function isSolved(regions: number[][], queens: Cell[]): boolean {
+  const n = regions.length;
+  if (queens.length !== n) return false;
+  for (const [r, c] of queens) {
+    if (!Number.isInteger(r) || !Number.isInteger(c) || r < 0 || c < 0 || r >= n || c >= n) {
+      return false;
+    }
   }
-
-  const { numbers, words } = numberWords(n, best.placed);
-  return { size: n, lang, level, grid: best.g, numbers, words };
+  // 퀸 n개가 서로 충돌하지 않으면 행/열/영역마다 정확히 1개씩이 된다.
+  for (let i = 0; i < queens.length; i++) {
+    for (let j = i + 1; j < queens.length; j++) {
+      if (queensConflict(regions, queens[i], queens[j])) return false;
+    }
+  }
+  return true;
 }
 
+<<<<<<< HEAD
 /* ───────────────── 유틸 ───────────────── */
 
 =======
 >>>>>>> parent of 40664f2 (fix: 정답이 50/50% 일 경우 regenerated)
 =======
 >>>>>>> parent of 40664f2 (fix: 정답이 50/50% 일 경우 regenerated)
+=======
+/* =========================================================================
+ * 난수 / 유틸
+ * ========================================================================= */
+>>>>>>> parent of 1d6e9c5 (feat: swap puzzle to crossword)
 export function mulberry32(a: number) {
   return function () {
     a |= 0;
@@ -114,6 +92,7 @@ function shuffle<T>(arr: T[], rng: () => number): T[] {
   return a;
 }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
 /** 한글은 음절 1개 = 1칸, 영어는 알파벳 1개 = 1칸 */
@@ -149,47 +128,110 @@ function growRegions(n: number, perm: number[], rng: () => number): number[][] {
   const reg: number[][] = Array.from({ length: n }, () => Array(n).fill(-1));
   const frontier: [number, number][] = [];
 >>>>>>> parent of 40664f2 (fix: 정답이 50/50% 일 경우 regenerated)
+=======
+const sameSolution = (a: number[], b: number[]) =>
+  a.length === b.length && a.every((v, i) => v === b[i]);
 
-type Grid = (string | null)[][];
-type Draft = Omit<PlacedWord, 'id' | 'number'>;
+const mod = (a: number, m: number) => ((a % m) + m) % m;
 
-/* ───────────────── 배치 로직 ───────────────── */
+/* =========================================================================
+ * 판 생성
+ * ========================================================================= */
+function randomPlacement(n: number, rng: () => number): number[] | null {
+  const perm: number[] = [];
+  const used = Array(n).fill(false);
 
-/** 배치 가능하면 교차 칸 수, 불가능하면 -1 */
-function canPlace(
-  g: Grid, used: number[][], chars: string[],
-  r: number, c: number, dir: Dir, n: number,
-): number {
-  const dr = dir === 'down' ? 1 : 0;
-  const dc = dir === 'across' ? 1 : 0;
-  const bit = dir === 'across' ? 1 : 2;
-  const len = chars.length;
-  const er = r + dr * (len - 1);
-  const ec = c + dc * (len - 1);
-
-  if (!inB(r, c, n) || !inB(er, ec, n)) return -1;
-  // 단어 앞뒤 칸은 비어 있어야 함
-  if (inB(r - dr, c - dc, n) && g[r - dr][c - dc] !== null) return -1;
-  if (inB(er + dr, ec + dc, n) && g[er + dr][ec + dc] !== null) return -1;
-
-  let cross = 0;
-  for (let i = 0; i < len; i++) {
-    const rr = r + dr * i;
-    const cc = c + dc * i;
-    const cur = g[rr][cc];
-    if (cur !== null) {
-      if (cur !== chars[i] || used[rr][cc] & bit) return -1;
-      cross++;
-    } else {
-      // 새 칸 옆(수직 방향)에 글자가 있으면 의도치 않은 단어가 생김
-      if (inB(rr + dc, cc + dr, n) && g[rr + dc][cc + dr] !== null) return -1;
-      if (inB(rr - dc, cc - dr, n) && g[rr - dc][cc - dr] !== null) return -1;
+  const bt = (r: number): boolean => {
+    if (r === n) return true;
+    const cols = shuffle([...Array(n).keys()], rng);
+    for (const c of cols) {
+      if (used[c]) continue;
+      // 행마다 1개씩이므로 바로 윗행과 닿는지만 보면 된다 (cellsTouch 규칙 공유)
+      if (r > 0 && cellsTouch(r, c, r - 1, perm[r - 1])) continue;
+      used[c] = true;
+      perm[r] = c;
+      if (bt(r + 1)) return true;
+      used[c] = false;
     }
-  }
-  if (cross === len) return -1;
-  return cross;
+    return false;
+  };
+
+  return bt(0) ? perm : null;
 }
 
+function growRegions(n: number, perm: number[], rng: () => number): number[][] | null {
+  const reg: number[][] = Array.from({ length: n }, () => Array(n).fill(-1));
+  const frontier: [number, number][] = [];
+>>>>>>> parent of 1d6e9c5 (feat: swap puzzle to crossword)
+
+  perm.forEach((c, r) => {
+    reg[r][c] = r;
+    frontier.push([r, c]);
+  });
+
+  let filled = n;
+  while (filled < n * n && frontier.length) {
+    const i = Math.floor(rng() * frontier.length);
+    const [r, c] = frontier[i];
+    const nb = ([[1, 0], [-1, 0], [0, 1], [0, -1]] as const)
+      .map(([dr, dc]): [number, number] => [r + dr, c + dc])
+      .filter(([a, b]) => a >= 0 && b >= 0 && a < n && b < n && reg[a][b] === -1);
+
+    if (!nb.length) {
+      frontier.splice(i, 1);
+      continue;
+    }
+
+    const [a, b] = nb[Math.floor(rng() * nb.length)];
+    reg[a][b] = reg[r][c];
+    frontier.push([a, b]);
+    filled++;
+  }
+
+  // 덜 채워진 판은 폐기
+  return filled === n * n ? reg : null;
+}
+
+/* =========================================================================
+ * 검사기
+ * ========================================================================= */
+
+/** 영역 구조 검증: 크기, id 범위, 빈 영역, 영역이 끊기지 않았는지 */
+export function validateRegions(regions: number[][], n: number): string | null {
+  if (regions.length !== n || regions.some(row => row.length !== n)) {
+    return '판 크기가 n×n이 아님';
+  }
+  const cells: [number, number][][] = Array.from({ length: n }, () => []);
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      const g = regions[r][c];
+      if (!Number.isInteger(g) || g < 0 || g >= n) return `잘못된 영역 id ${g} at (${r},${c})`;
+      cells[g].push([r, c]);
+    }
+  }
+  for (let g = 0; g < n; g++) {
+    if (!cells[g].length) return `영역 ${g}이 비어 있음`;
+    const seen = new Set<number>();
+    const stack = [cells[g][0]];
+    seen.add(cells[g][0][0] * n + cells[g][0][1]);
+    while (stack.length) {
+      const [r, c] = stack.pop()!;
+      for (const [dr, dc] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const a = r + dr;
+        const b = c + dc;
+        if (a < 0 || b < 0 || a >= n || b >= n || regions[a][b] !== g) continue;
+        const k = a * n + b;
+        if (seen.has(k)) continue;
+        seen.add(k);
+        stack.push([a, b]);
+      }
+    }
+    if (seen.size !== cells[g].length) return `영역 ${g}이 끊어져 있음`;
+  }
+  return null;
+}
+
+<<<<<<< HEAD
 function placeWord(g: Grid, used: number[][], chars: string[], r: number, c: number, dir: Dir) {
   const dr = dir === 'down' ? 1 : 0;
   const dc = dir === 'across' ? 1 : 0;
@@ -199,32 +241,77 @@ function placeWord(g: Grid, used: number[][], chars: string[], r: number, c: num
     used[r + dr * i][c + dc * i] |= bit;
   });
 <<<<<<< HEAD
+=======
+/**
+ * 해를 최대 limit개까지 찾는다. 판정은 queensConflict 하나만 쓴다.
+ * 올바른 해는 항상 행마다 퀸이 정확히 1개라서, 행 단위로 탐색해도 빠지는 해가 없다.
+ */
+function findSolutions(reg: number[][], n: number, limit = 2): number[][] {
+  const solutions: number[][] = [];
+  const queens: Cell[] = [];
+
+  const bt = (r: number) => {
+    if (solutions.length >= limit) return;
+    if (r === n) {
+      solutions.push(queens.map(([, c]) => c));
+      return;
+    }
+    for (let c = 0; c < n && solutions.length < limit; c++) {
+      const cell: Cell = [r, c];
+      if (queens.some(q => queensConflict(reg, q, cell))) continue;
+      queens.push(cell);
+      bt(r + 1);
+      queens.pop();
+    }
+  };
+
+  bt(0);
+  return solutions;
+>>>>>>> parent of 1d6e9c5 (feat: swap puzzle to crossword)
 }
 
-function buildOnce(n: number, bank: WordEntry[], target: number, rng: () => number) {
-  const g: Grid = Array.from({ length: n }, () => Array(n).fill(null));
-  const used = Array.from({ length: n }, () => Array(n).fill(0));
-  const placed: Draft[] = [];
-  const usedAnswers = new Set<string>();
+function logicSolve(
+  reg: number[][],
+  n: number
+): { solved: boolean; level: number; solution: number[] | null } {
+  const N = n * n;
+  const cand = new Uint8Array(N).fill(1);
+  const placed = new Uint8Array(N);
+  const units: number[][] = [];
 
-  const pool = shuffle(bank.filter(w => splitChars(w.answer).length <= n), rng);
+  for (let r = 0; r < n; r++) {
+    const u: number[] = [];
+    for (let c = 0; c < n; c++) u.push(r * n + c);
+    units.push(u);
+  }
+  for (let c = 0; c < n; c++) {
+    const u: number[] = [];
+    for (let r = 0; r < n; r++) u.push(r * n + c);
+    units.push(u);
+  }
+  for (let g = 0; g < n; g++) units.push([]);
+  for (let i = 0; i < N; i++) {
+    units[2 * n + reg[Math.floor(i / n)][i % n]].push(i);
+  }
 
-  // 첫 단어: 길이가 절반 이상인 단어를 가운데 근처에 가로로
-  const first = pool.find(w => splitChars(w.answer).length >= Math.ceil(n / 2)) ?? pool[0];
-  const fc = splitChars(first.answer);
-  const fr = Math.floor(n / 2) - 1 + Math.floor(rng() * 2);
-  const fcol = Math.floor(rng() * (n - fc.length + 1));
-  placeWord(g, used, fc, fr, fcol, 'across');
-  placed.push({ dir: 'across', row: fr, col: fcol, answer: fc, clue: first.clue, hint: first.hint });
-  usedAnswers.add(first.answer);
+  // 충돌 표를 미리 계산 (규칙은 queensConflict와 같음)
+  const conflict = new Uint8Array(N * N);
+  for (let i = 0; i < N; i++) {
+    for (let j = 0; j < N; j++) {
+      if (i !== j && queensConflict(reg, [Math.floor(i / n), i % n], [Math.floor(j / n), j % n])) {
+        conflict[i * N + j] = 1;
+      }
+    }
+  }
 
-  // 두 번 순회: 처음엔 못 들어가던 단어도 나중엔 교차점이 생길 수 있음
-  for (let pass = 0; pass < 2 && placed.length < target; pass++) {
-    for (const w of pool) {
-      if (placed.length >= target) break;
-      if (usedAnswers.has(w.answer)) continue;
-      const chars = splitChars(w.answer);
+  const place = (cd: Uint8Array, pl: Uint8Array, i: number) => {
+    pl[i] = 1;
+    for (let j = 0; j < N; j++) {
+      if (cd[j] && conflict[i * N + j]) cd[j] = 0;
+    }
+  };
 
+<<<<<<< HEAD
       let best: [number, number, Dir][] = [];
       let bestCross = 0;
       for (const dir of ['across', 'down'] as Dir[]) {
@@ -334,6 +421,8 @@ function logicSolve(reg: number[][], n: number): { solved: boolean; level: numbe
     }
   };
 
+=======
+>>>>>>> parent of 1d6e9c5 (feat: swap puzzle to crossword)
   const dead = (cd: Uint8Array, pl: Uint8Array) =>
     units.some(u => !u.some(i => pl[i]) && !u.some(i => cd[i]));
 
@@ -342,10 +431,19 @@ function logicSolve(reg: number[][], n: number): { solved: boolean; level: numbe
 
   while (count < n) {
     let progress = false;
+<<<<<<< HEAD
     for (const u of units) {
       if (u.some(i => placed[i])) continue;
       const cs = u.filter(i => cand[i]);
       if (!cs.length) return { solved: false, level };
+=======
+
+    // Lv1: 남은 후보가 1칸뿐인 줄/영역
+    for (const u of units) {
+      if (u.some(i => placed[i])) continue;
+      const cs = u.filter(i => cand[i]);
+      if (!cs.length) return { solved: false, level, solution: null };
+>>>>>>> parent of 1d6e9c5 (feat: swap puzzle to crossword)
       if (cs.length === 1) {
         place(cand, placed, cs[0]);
         count++;
@@ -355,6 +453,10 @@ function logicSolve(reg: number[][], n: number): { solved: boolean; level: numbe
     }
     if (progress) continue;
 
+<<<<<<< HEAD
+=======
+    // Lv2: 한 줄/영역의 후보가 모두 다른 줄/영역 안에 있으면 그쪽의 나머지 후보 제거
+>>>>>>> parent of 1d6e9c5 (feat: swap puzzle to crossword)
     for (const a of units) {
       if (a.some(i => placed[i])) continue;
       const cs = a.filter(i => cand[i]);
@@ -365,77 +467,208 @@ function logicSolve(reg: number[][], n: number): { solved: boolean; level: numbe
           if (cand[j] && !placed[j] && !cs.includes(j)) {
             cand[j] = 0;
             progress = true;
+<<<<<<< HEAD
 >>>>>>> parent of 40664f2 (fix: 정답이 50/50% 일 경우 regenerated)
+=======
+>>>>>>> parent of 1d6e9c5 (feat: swap puzzle to crossword)
           }
         }
       }
-      if (!best.length) continue;
+    }
+    if (progress) {
+      level = Math.max(level, 2);
+      continue;
+    }
 
+<<<<<<< HEAD
 <<<<<<< HEAD
 <<<<<<< HEAD
       const [r, c, dir] = best[Math.floor(rng() * best.length)];
       placeWord(g, used, chars, r, c, dir);
       placed.push({ dir, row: r, col: c, answer: chars, clue: w.clue, hint: w.hint });
       usedAnswers.add(w.answer);
+=======
+    // Lv3: 놓았을 때 다른 줄/영역이 막히는 칸 제거
+    for (let i = 0; i < N; i++) {
+      if (!cand[i] || placed[i]) continue;
+      const cd = cand.slice();
+      const pl = placed.slice();
+      place(cd, pl, i);
+      if (dead(cd, pl)) {
+        cand[i] = 0;
+        progress = true;
+      }
+    }
+    if (progress) {
+      level = Math.max(level, 3);
+      continue;
+    }
+
+    return { solved: false, level, solution: null };
+  }
+
+  const solution = Array(n).fill(-1);
+  for (let i = 0; i < N; i++) if (placed[i]) solution[Math.floor(i / n)] = i % n;
+  return { solved: true, level, solution };
+}
+
+/* =========================================================================
+ * 퍼즐 검증 (생성한 판, 예비 퍼즐, 비상용 퍼즐 모두 이걸 통과해야 함)
+ * ========================================================================= */
+export type VerifyResult = { ok: true; level: number } | { ok: false; reason: string };
+
+export function verifyPuzzle(p: PuzzleData): VerifyResult {
+  const n = p.regions.length;
+
+  const regionError = validateRegions(p.regions, n);
+  if (regionError) return { ok: false, reason: regionError };
+
+  if (
+    p.solution.length !== n ||
+    p.solution.some(c => !Number.isInteger(c) || c < 0 || c >= n)
+  ) {
+    return { ok: false, reason: '정답 배열 형식 오류' };
+  }
+
+  const solCells: Cell[] = p.solution.map((c, r) => [r, c] as const);
+  if (!isSolved(p.regions, solCells)) {
+    return { ok: false, reason: '저장된 정답이 게임 규칙을 어김' };
+  }
+
+  // 해가 정확히 1개인지
+  const sols = findSolutions(p.regions, n, 2);
+  if (sols.length === 0) return { ok: false, reason: '해가 없음' };
+  if (sols.length > 1) return { ok: false, reason: '해가 2개 이상' };
+  if (!sameSolution(sols[0], p.solution)) return { ok: false, reason: '찾은 해가 저장된 정답과 다름' };
+
+  // 추측 없이 논리만으로 풀리는지
+  const ls = logicSolve(p.regions, n);
+  if (!ls.solved || !ls.solution || !sameSolution(ls.solution, p.solution)) {
+    return { ok: false, reason: '논리 풀이만으로 풀리지 않음' };
+  }
+
+  return { ok: true, level: ls.level };
+}
+
+/* =========================================================================
+ * 예비 퍼즐
+ * buildBackupPuzzles()로 미리 만든 JSON을 여기에 붙여 넣는다.
+ * 붙여 넣은 뒤에도 실제로 쓸 때 verifyPuzzle을 다시 거친다.
+ * ========================================================================= */
+export const BACKUP_PUZZLES: Partial<Record<BoardSize, PuzzleData[]>> = {
+  // 5: [{ regions: [...], solution: [...], level: 1 }, ...],
+};
+
+const verifiedBackupCache = new Map<PuzzleData, VerifyResult>();
+
+function pickBackup(n: BoardSize, stage: number): PuzzleData | null {
+  const list = BACKUP_PUZZLES[n] ?? [];
+  for (let k = 0; k < list.length; k++) {
+    const p = list[mod(stage + k, list.length)];
+    let v = verifiedBackupCache.get(p);
+    if (!v) {
+      v = verifyPuzzle(p);
+      verifiedBackupCache.set(p, v);
+      if (!v.ok) console.warn(`[puzzle] 예비 퍼즐 검증 실패 (n=${n}): ${v.reason}`);
+    }
+    if (v.ok) return { ...p, level: v.level };
+  }
+  return null;
+}
+
+/** 호출부에서 예비 퍼즐을 직접 꺼낼 때 사용 */
+export function getBackupPuzzle(n: BoardSize, stage: number): PuzzleData | null {
+  return pickBackup(n, stage);
+}
+
+/**
+ * 비상용 퍼즐: 정답 퀸 n-1개를 각각 1칸짜리 영역으로 만들고, 나머지 칸은 한 영역으로 묶는다.
+ * 해가 하나뿐인 게 보장되지만 쉽다. 이것도 verifyPuzzle을 통과해야 반환한다.
+ */
+export function buildEmergencyPuzzle(n: BoardSize, stage: number): PuzzleData | null {
+  const rng = mulberry32((n * 31337 + stage * 1009) | 0);
+  for (let t = 0; t < 50; t++) {
+    const perm = randomPlacement(n, rng);
+    if (!perm) continue;
+
+    const big = n - 1;
+    const regions = Array.from({ length: n }, () => Array(n).fill(big));
+    for (let r = 0; r < n - 1; r++) regions[r][perm[r]] = r;
+
+    const p: PuzzleData = { regions, solution: perm, level: 0 };
+    const v = verifyPuzzle(p);
+    if (v.ok) return { ...p, level: v.level };
+  }
+  return null;
+}
+
+/* =========================================================================
+ * 생성 API
+ * ========================================================================= */
+export type PuzzleSource = 'generated' | 'backup' | 'emergency';
+
+export type PuzzleResult =
+  | { ok: true; puzzle: PuzzleData; source: PuzzleSource }
+  | { ok: false; reason: string };
+
+export interface GenerateOptions {
+  maxAttempts?: number;
+  /** 재시도 번호. 0이면 기존과 같은 퍼즐이 나오고, 1부터는 시드가 바뀐다. */
+  retry?: number;
+  /** 실패했을 때 예비 퍼즐로 넘어갈지 여부 */
+  allowBackup?: boolean;
+}
+
+/** stage: 시드용 스테이지 번호 (반환값의 level은 난이도라서 이름을 구분함) */
+export function usePuzzleResult(
+  n: BoardSize,
+  stage: number,
+  { maxAttempts = 2000, retry = 0, allowBackup = true }: GenerateOptions = {}
+): PuzzleResult {
+  // retry = 0이면 기존 시드와 같아서, 이미 나오던 퍼즐은 바뀌지 않는다
+  const rng = mulberry32((n * 100003 + stage * 7919 + retry * 104729) | 0);
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    const perm = randomPlacement(n, rng);
+    if (!perm) continue;
+    const regions = growRegions(n, perm, rng);
+    if (!regions) continue;
+
+    const candidate: PuzzleData = { regions, solution: perm, level: 0 };
+    const v = verifyPuzzle(candidate);
+    if (v.ok) {
+      return { ok: true, puzzle: { ...candidate, level: v.level }, source: 'generated' };
+>>>>>>> parent of 1d6e9c5 (feat: swap puzzle to crossword)
     }
   }
 
-  const filled = g.flat().filter(x => x !== null).length;
-  return { g, placed, score: placed.length * 100 + filled };
-}
-
-function numberWords(n: number, drafts: Draft[]) {
-  const numbers: (number | null)[][] = Array.from({ length: n }, () => Array(n).fill(null));
-  const starts = [...new Set(drafts.map(d => d.row * n + d.col))].sort((a, b) => a - b);
-  starts.forEach((s, i) => { numbers[Math.floor(s / n)][s % n] = i + 1; });
-
-  const words: PlacedWord[] = drafts
-    .map((d, id) => ({ ...d, id, number: numbers[d.row][d.col]! }))
-    .sort((a, b) => a.number - b.number || (a.dir === 'across' ? -1 : 1));
-
-  return { numbers, words };
-}
-
-/* ───────────────── 메인 API ───────────────── */
-
-export function generateCrossword(lang: Lang, level: number, n = 8): CrosswordData {
-  const seed = n * 100003 + level * 7919 + (lang === 'en' ? 104729 : 0);
-  const rng = mulberry32(seed);
-  const bank = lang === 'ko' ? KO_BANK : EN_BANK;
-
-  // 레벨이 오를수록 단어 수 증가 (6 ~ 14개)
-  const target = Math.min(14, 6 + Math.floor(level / 2));
-
-  let best = buildOnce(n, bank, target, rng);
-  for (let i = 0; i < 300 && best.placed.length < target; i++) {
-    const t = buildOnce(n, bank, target, rng);
-    if (t.score > best.score) best = t;
+  // 검증 안 된 판은 절대 내보내지 않음 → 예비 퍼즐 또는 실패
+  if (allowBackup) {
+    const backup = pickBackup(n, stage);
+    if (backup) return { ok: true, puzzle: backup, source: 'backup' };
   }
 
-  const { numbers, words } = numberWords(n, best.placed);
-  return { size: n, lang, level, grid: best.g, numbers, words };
+  return {
+    ok: false,
+    reason: `n=${n}, stage=${stage}, retry=${retry}: ${maxAttempts}회 안에 유일해 퍼즐 생성 실패`,
+  };
 }
 
-/* ───────────────── 정답 체크 ───────────────── */
-
-export function createEmptyInput(data: CrosswordData): string[][] {
-  return data.grid.map(row => row.map(() => ''));
+export class PuzzleGenerationError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'PuzzleGenerationError';
+  }
 }
 
-export function checkInput(data: CrosswordData, input: string[][]) {
-  const wrong: [number, number][] = [];
-  let empty = 0;
-  data.grid.forEach((row, r) =>
-    row.forEach((ans, c) => {
-      if (ans === null) return;
-      const v = splitChars(input[r]?.[c] ?? '')[0] ?? '';
-      if (!v) empty++;
-      else if (v !== ans) wrong.push([r, c]);
-    }),
-  );
-  return { solved: wrong.length === 0 && empty === 0, wrong, empty };
+/** 기존 호출부 호환용. 실패하면 검증 안 된 판 대신 예외를 던진다. (새 코드는 usePuzzle 사용) */
+export function usePuzzle(n: BoardSize, stage: number): PuzzleData {
+  const res = usePuzzleResult(n, stage);
+  if (!res.ok) throw new PuzzleGenerationError(res.reason);
+  return res.puzzle;
 }
 
+<<<<<<< HEAD
 =======
 =======
 >>>>>>> parent of 40664f2 (fix: 정답이 50/50% 일 경우 regenerated)
@@ -495,6 +728,19 @@ export function generatePuzzle(n: BoardSize, level: number): PuzzleData {
 >>>>>>> parent of 40664f2 (fix: 정답이 50/50% 일 경우 regenerated)
 =======
 >>>>>>> parent of 40664f2 (fix: 정답이 50/50% 일 경우 regenerated)
+=======
+/** 오프라인에서 예비 퍼즐을 만들 때 쓰는 함수 (빌드 스크립트에서 실행 후 JSON으로 저장) */
+export function buildBackupPuzzles(n: BoardSize, count: number, startStage = 100000): PuzzleData[] {
+  const out: PuzzleData[] = [];
+  for (let s = startStage; out.length < count && s < startStage + count * 50; s++) {
+    const res = usePuzzleResult(n, s, { allowBackup: false });
+    if (res.ok) out.push(res.puzzle);
+  }
+  return out;
+}
+
+/* ========================================================================= */
+>>>>>>> parent of 1d6e9c5 (feat: swap puzzle to crossword)
 export function formatTime(ms: number): string {
   const s = Math.floor(ms / 1000);
   const mins = Math.floor(s / 60);
