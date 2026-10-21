@@ -124,11 +124,6 @@ body {
 @keyframes combo-ring { 0% { transform: scale(.2); opacity: 1; } 100% { transform: scale(1.25); opacity: 0; } }
 @keyframes combo-cell-flash { 0% { filter: brightness(1); } 18% { filter: brightness(1.9) saturate(1.7); } 100% { filter: brightness(1); } }
 @keyframes combo-cell-ring { 0% { opacity: 1; transform: scale(.6); } 100% { opacity: 0; transform: scale(1.25); } }
-.mode-disc { transform-style: preserve-3d; animation: othello-flip .52s cubic-bezier(.2,.7,.3,1) both; }
-.mode-agent-active { background: linear-gradient(#fff0cf, #f0c27c); box-shadow: inset 0 2px 0 rgba(255,255,255,.7), 0 2px 0 #7a4a22; }
-.mode-x-active { background: linear-gradient(#f0dfc2, #bba98c); box-shadow: inset 0 2px 0 rgba(255,255,255,.55), 0 2px 0 #7a4a22; }
-.mode-idle { filter: saturate(.7); }
-@keyframes othello-flip { 0% { transform: perspective(240px) rotateY(-88deg) scale(.86); } 55% { transform: perspective(240px) rotateY(12deg) scale(1.04); } 100% { transform: perspective(240px) rotateY(0) scale(1); } }
 @media (prefers-reduced-motion: reduce) { .scene-shell, .scene-prompt { animation: none; } }
 
 /* Board frame & Cell styling */

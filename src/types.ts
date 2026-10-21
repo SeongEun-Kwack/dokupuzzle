@@ -2,8 +2,6 @@ export type BoardSize = 5 | 6 | 7 | 8;
 
 export type CellState = 0 | 1 | 2; // 0: Empty, 1: X (Elimination), 2: Detective placed
 
-export type ToolType = 'x' | 'agent';
-
 export type Language = 'ko' | 'en';
 
 export interface PuzzleData {

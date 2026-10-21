@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { BoardSize, CellState, ThreadEffect, ToolType } from '../types';
+import { BoardSize, CellState, ThreadEffect } from '../types';
 import { PALETTE } from '../utils/puzzle';
 import { DetectiveSVG } from './DetectiveSVG';
 
@@ -10,7 +10,6 @@ interface BoardProps {
   n: BoardSize;
   regions: number[][];
   marks: CellState[];
-  tool: ToolType;
   badCell: number | null;
   hintCell: number | null;
   zoneCells: number[];
@@ -24,7 +23,6 @@ export const Board: React.FC<BoardProps> = ({
   n,
   regions,
   marks,
-  tool,
   badCell,
   hintCell,
   zoneCells,
@@ -36,11 +34,10 @@ export const Board: React.FC<BoardProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const marksRef = useRef(marks);
   marksRef.current = marks;
-  const lastTapRef = useRef<{ i: number; t: number; tapPlace: boolean }>({ i: -1, t: 0, tapPlace: false });
+  const lastTapRef = useRef<{ i: number; t: number }>({ i: -1, t: 0 });
   const pressRef = useRef<{
     i: number;
     val: 0 | 1;
-    tapPlace: boolean;
     dragging: boolean;
     longPressed: boolean;
     lastCell: number;
@@ -101,7 +98,7 @@ export const Board: React.FC<BoardProps> = ({
     if (!press.dragging) {
       if (press.timer) clearTimeout(press.timer);
       press.dragging = true;
-      lastTapRef.current = { i: -1, t: 0, tapPlace: false };
+      lastTapRef.current = { i: -1, t: 0 };
       paintPath(press.i, index, press.val);
     } else if (press.lastCell !== index) {
       paintPath(press.lastCell, index, press.val);
@@ -126,10 +123,10 @@ export const Board: React.FC<BoardProps> = ({
           }
           const index = press.i;
           const timer = setTimeout(() => {
-            executeTapAction(index, press.tapPlace);
+            executeTapAction(index, false);
             pendingClickRef.current = null;
           }, DOUBLE_TAP_MS);
-          pendingClickRef.current = { index, place: press.tapPlace, timer };
+          pendingClickRef.current = { index, place: false, timer };
         }
         pressRef.current = null;
       }
@@ -148,15 +145,13 @@ export const Board: React.FC<BoardProps> = ({
     e.preventDefault();
     const now = Date.now();
     if (lastTapRef.current.i === index && now - lastTapRef.current.t < DOUBLE_TAP_MS) {
-      // Double-tap performs the opposite action from this mode's short tap.
-      const doubleTapPlace = !lastTapRef.current.tapPlace;
       if (pendingClickRef.current) {
         clearTimeout(pendingClickRef.current.timer);
         pendingClickRef.current = null;
       }
       lastTapRef.current = { i: -1, t: 0 };
       suppressPointerUpRef.current = true;
-      executeTapAction(index, doubleTapPlace);
+      executeTapAction(index, true);
       return;
     }
     if (pendingClickRef.current) {
@@ -166,15 +161,14 @@ export const Board: React.FC<BoardProps> = ({
     }
     if (marksRef.current[index] === 2) return;
 
-    const tapPlace = tool === 'agent';
-    lastTapRef.current = { i: index, t: now, tapPlace };
+    lastTapRef.current = { i: index, t: now };
     const targetVal: 0 | 1 = marksRef.current[index] === 1 ? 0 : 1;
-    const press = { i: index, val: targetVal, tapPlace, dragging: false, longPressed: false, lastCell: index, timer: null as ReturnType<typeof setTimeout> | null };
+    const press = { i: index, val: targetVal, dragging: false, longPressed: false, lastCell: index, timer: null as ReturnType<typeof setTimeout> | null };
     press.timer = setTimeout(() => {
       if (pressRef.current !== press || press.dragging) return;
       press.longPressed = true;
-      lastTapRef.current = { i: -1, t: 0, tapPlace: false };
-      executeTapAction(index, !press.tapPlace);
+      lastTapRef.current = { i: -1, t: 0 };
+      executeTapAction(index, true);
     }, LONG_PRESS_MS);
     pressRef.current = press;
     containerRef.current?.setPointerCapture(e.pointerId);
@@ -195,7 +189,7 @@ export const Board: React.FC<BoardProps> = ({
 
   const handleContextMenu = (e: React.MouseEvent, index: number) => {
     e.preventDefault();
-    executeTapAction(index, tool !== 'agent');
+    executeTapAction(index, true);
   };
 
   return (

@@ -29,8 +29,6 @@ export const DICTIONARY = {
     on: '켜짐',
     off: '꺼짐',
     caseLbl: 'CASE',
-    tMark: '소거',
-    tPlace: '배치',
     tUndo: '되돌리기',
     tRetry: '다시하기',
     tHint: '힌트',
@@ -84,7 +82,7 @@ export const DICTIONARY = {
       },
       {
         h: '4. 조작 및 수사 규칙',
-        p: '<b>터치/클릭</b>으로 ✕ 표시(드래그 가능), <b>더블터치</b>나 <b>[배치]</b> 도구로 탐정을 배치합니다. 실수할 때마다 명성이 감소하며 3번 실수 시 사건이 미궁에 빠집니다.'
+        p: '<b>짧게 터치/클릭</b>하면 ✕를 표시하고, <b>길게 누르거나 더블터치</b>하면 탐정을 배치합니다. 드래그로 연속 소거할 수 있습니다. 실수할 때마다 명성이 감소하며 3번 실수 시 사건이 미궁에 빠집니다.'
       }
     ],
     solved: '사건 해결!',
@@ -102,8 +100,6 @@ export const DICTIONARY = {
     dossier: '수사 일지',
     shortcuts: '키보드 단축키',
     shortcutsList: [
-      { key: 'X', desc: '소거 도구' },
-      { key: 'D / Space', desc: '탐정 배치 도구' },
       { key: 'Z / Ctrl+Z', desc: '되돌리기' },
       { key: 'H', desc: '힌트' }
     ],
@@ -168,8 +164,6 @@ export const DICTIONARY = {
     on: 'ON',
     off: 'OFF',
     caseLbl: 'CASE',
-    tMark: 'Eliminate',
-    tPlace: 'Place',
     tUndo: 'Undo',
     tRetry: 'Retry',
     tHint: 'Hint',
@@ -223,7 +217,7 @@ export const DICTIONARY = {
       },
       {
         h: '4. Controls & Rules',
-        p: '<b>Tap/Click</b> to mark ✕ (drag supported). <b>Double-tap</b> or the <b>Place</b> tool to place a detective. 3 mistakes will freeze the case.'
+        p: '<b>Short tap/click</b> to mark ✕; <b>long press or double-tap</b> to place a detective. Drag to eliminate continuously. 3 mistakes will freeze the case.'
       }
     ],
     solved: 'Case Solved!',
@@ -241,8 +235,6 @@ export const DICTIONARY = {
     dossier: 'Case Dossier',
     shortcuts: 'Keyboard Shortcuts',
     shortcutsList: [
-      { key: 'X', desc: 'Eliminate Tool' },
-      { key: 'D / Space', desc: 'Place Tool' },
       { key: 'Z / Ctrl+Z', desc: 'Undo' },
       { key: 'H', desc: 'Hint' }
     ],

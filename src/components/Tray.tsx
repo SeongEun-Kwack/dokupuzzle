@@ -1,24 +1,21 @@
 import React from 'react';
-import { RotateCcw, Lightbulb, X as XIcon, Sparkles } from 'lucide-react';
-import { Language, ToolType } from '../types';
+import { RotateCcw, Lightbulb, Sparkles } from 'lucide-react';
+import { Language } from '../types';
 import { translate } from '../utils/i18n';
-import { DetectiveSVG } from './DetectiveSVG';
 
 interface TrayProps {
   language: Language;
-  tool: ToolType;
   hintsLeft: number;
   autoClearCount: number;
   autoClearUsed: boolean;
-  onSelectTool: (t: ToolType) => void;
   onRestart: () => void;
   onHint: () => void;
   onAutoClear: () => void;
 }
 
 export const Tray: React.FC<TrayProps> = ({
-  language, tool, hintsLeft, autoClearCount, autoClearUsed,
-  onSelectTool, onRestart, onHint, onAutoClear
+  language, hintsLeft, autoClearCount, autoClearUsed,
+  onRestart, onHint, onAutoClear
 }) => {
   const itemClass = 'tool-btn flex min-w-0 flex-1 flex-col items-center gap-1 sm:gap-1.5 cursor-pointer bg-transparent border-0 p-0 text-[#4a2a12] group';
   const iconClass = 'tool-icon relative w-11 h-11 sm:w-14 sm:h-14 rounded-xl grid place-items-center wood-button transition-all group-enabled:hover:brightness-105';
@@ -26,17 +23,6 @@ export const Tray: React.FC<TrayProps> = ({
 
   return (
     <nav className="tray tablet-nav flex justify-around items-center gap-1 py-2.5 sm:py-3 px-2 sm:px-3 rounded-2xl bg-[#6e4323]/25 shadow-[inset_0_2px_5px_rgba(60,30,10,0.3)] w-full max-w-[min(100%,460px)] mx-auto">
-      {/* Required mobile order: Place, Eliminate, Hint, Auto-clear, Restart. */}
-      <button onClick={() => onSelectTool('agent')} aria-pressed={tool === 'agent'} className={itemClass}>
-        <span key={tool} className={`${iconClass} mode-disc ${tool === 'agent' ? 'mode-agent-active ring-3 ring-[#b8322a]' : 'mode-idle'}`}><span className="w-7 h-7 sm:w-8 sm:h-8"><DetectiveSVG fill="#4a2a12" /></span></span>
-        <span className={labelClass}>{translate(language, 'tPlace')}</span>
-      </button>
-
-      <button onClick={() => onSelectTool('x')} aria-pressed={tool === 'x'} className={itemClass}>
-        <span key={tool} className={`${iconClass} mode-disc ${tool === 'x' ? 'mode-x-active ring-3 ring-[#b8322a]' : 'mode-idle'}`}><XIcon className="w-7 h-7 sm:w-8 sm:h-8 stroke-[3.2] text-[#4a2a12]" /></span>
-        <span className={labelClass}>{translate(language, 'tMark')}</span>
-      </button>
-
       <button onClick={onHint} disabled={hintsLeft <= 0} className={`${itemClass} disabled:opacity-40 disabled:cursor-default`}>
         <span className={iconClass}><Lightbulb className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.4] text-[#4a2a12]" /><span className="absolute -right-1.5 -bottom-1.5 min-w-5 h-5 px-1 rounded-md bg-[#d2552f] text-white text-xs font-black grid place-items-center border-2 border-[#fff3dc] shadow-sm">{hintsLeft}</span></span>
         <span className={labelClass}>{translate(language, 'tHint')}</span>

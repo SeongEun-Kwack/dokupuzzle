@@ -1,4 +1,10 @@
 class SoundSystem {
+  // Add future combo callouts here; voice playback is isolated from synthesized SFX/BGM.
+  private readonly comboVoiceUrls = [
+    '/assets/voice/checkpoint.wav',
+    '/assets/voice/brilliant.wav'
+  ];
+  private lastComboVoiceIndex = -1;
   private ctx: AudioContext | null = null;
   private enabled: boolean = true;
   private bgmTimer: ReturnType<typeof setInterval> | null = null;
@@ -15,6 +21,22 @@ class SoundSystem {
 
   public isEnabled(): boolean {
     return this.enabled;
+  }
+
+  public playComboVoice() {
+    if (typeof window === 'undefined' || this.comboVoiceUrls.length === 0) return;
+    let index = Math.floor(Math.random() * this.comboVoiceUrls.length);
+    if (this.comboVoiceUrls.length > 1 && index === this.lastComboVoiceIndex) {
+      index = (index + 1 + Math.floor(Math.random() * (this.comboVoiceUrls.length - 1))) % this.comboVoiceUrls.length;
+    }
+    this.lastComboVoiceIndex = index;
+    try {
+      const voice = new Audio(this.comboVoiceUrls[index]);
+      voice.volume = 0.9;
+      void voice.play().catch(() => {});
+    } catch {
+      // Voice callouts must not interfere with existing game audio.
+    }
   }
 
   public startBgm() {

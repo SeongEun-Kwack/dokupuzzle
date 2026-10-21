@@ -5,7 +5,6 @@ import {
   LevelRecord,
   PuzzleData,
   ThreadEffect,
-  ToolType,
   UserSettings
 } from './types';
 import { generatePuzzle } from './utils/puzzle';
@@ -59,7 +58,6 @@ export default function App() {
   const [autoClearUsed, setAutoClearUsed] = useState(false);
   const [undoStack, setUndoStack] = useState<CellState[][]>([]);
   const [isOver, setIsOver] = useState<boolean>(false);
-  const [tool, setTool] = useState<ToolType>('x');
 
   // Status message
   const [statusText, setStatusText] = useState<string>('');
@@ -303,6 +301,7 @@ export default function App() {
         setScore(nextScore);
         setCombo(true);
         if (combo) {
+          sound.playComboVoice();
           const effect = { index, id: ++comboEffectCounter.current };
           setComboCell(effect);
           setTimeout(() => setComboCell(current => current?.id === effect.id ? null : current), 1300);
@@ -599,7 +598,6 @@ export default function App() {
                 n={size}
                 regions={puzzle.regions}
                 marks={marks}
-                tool={tool}
                 comboCell={comboCell}
                 badCell={badCell}
                 hintCell={hintCell}
@@ -619,11 +617,9 @@ export default function App() {
           {/* Bottom Tool Tray */}
           <Tray
             language={settings.language}
-            tool={tool}
             hintsLeft={hintsLeft}
             autoClearCount={autoClearCount}
             autoClearUsed={autoClearUsed}
-            onSelectTool={setTool}
             onRestart={() => setIsRestartConfirmOpen(true)}
             onHint={handleHint}
             onAutoClear={handleAutoClear}
