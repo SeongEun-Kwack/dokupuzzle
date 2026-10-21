@@ -1,3 +1,5 @@
+declare const __APP_VERSION__: string;
+
 export type BoardSize = 5 | 6 | 7 | 8;
 
 export type CellState = 0 | 1 | 2; // 0: Empty, 1: X (Elimination), 2: Detective placed
@@ -51,3 +53,4 @@ export interface ThreadEffect {
   r: number;
   c: number;
 }
+declare const __APP_VERSION__: string;
