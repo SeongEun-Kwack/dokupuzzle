@@ -1,12 +1,7 @@
-<<<<<<< HEAD
-<<<<<<< HEAD
+@ -1,6 +1,727 @@
 <<<<<<< HEAD
 import { CrosswordGame } from './components/CrosswordGame';
 =======
-=======
->>>>>>> parent of 79818ce (fix: remove suduku)
-=======
->>>>>>> parent of 79818ce (fix: remove suduku)
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   BoardSize,
@@ -16,15 +11,7 @@ import {
   ThreadEffect,
   UserSettings
 } from './types';
-<<<<<<< HEAD
-<<<<<<< HEAD
 import { generatePuzzle } from './utils/puzzle';
-=======
-import { usePuzzle } from './utils/puzzle';
->>>>>>> parent of 79818ce (fix: remove suduku)
-=======
-import { usePuzzle } from './utils/puzzle';
->>>>>>> parent of 79818ce (fix: remove suduku)
 import { sound } from './utils/audio';
 import { storage } from './utils/storage';
 import { DICTIONARY, translate } from './utils/i18n';
@@ -41,23 +28,13 @@ import { OrientationLock } from './components/OrientationLock';
 const MAX_COVER = 3;
 const HINT_MAX = 3;
 const MAX_AUTO_CLEAR = 5;
-<<<<<<< HEAD
-<<<<<<< HEAD
 >>>>>>> parent of 40664f2 (fix: 정답이 50/50% 일 경우 regenerated)
-=======
->>>>>>> parent of 79818ce (fix: remove suduku)
 
+/** Keep the standard App entry pointed at the active crossword game. */
 export default function App() {
-<<<<<<< HEAD
 <<<<<<< HEAD
   return <CrosswordGame />;
 =======
-=======
->>>>>>> parent of 79818ce (fix: remove suduku)
-=======
-
-export default function App() {
->>>>>>> parent of 79818ce (fix: remove suduku)
   const [scene, setScene] = useState<'title' | 'loading' | 'main' | 'ending'>('title');
   const [loadProgress, setLoadProgress] = useState(0);
   // Settings
@@ -173,15 +150,7 @@ export default function App() {
 
       // Async generation to avoid blocking UI frame
       setTimeout(() => {
-<<<<<<< HEAD
-<<<<<<< HEAD
         const p = generatePuzzle(targetSize, targetLevel);
-=======
-        const p = usePuzzle(targetSize, targetLevel);
->>>>>>> parent of 79818ce (fix: remove suduku)
-=======
-        const p = usePuzzle(targetSize, targetLevel);
->>>>>>> parent of 79818ce (fix: remove suduku)
         setPuzzle(p);
 
         // Check if there is an in-progress saved game state in localStorage
@@ -755,11 +724,5 @@ export default function App() {
       <OrientationLock language={settings.language} />
     </div>
   );
-<<<<<<< HEAD
-<<<<<<< HEAD
 >>>>>>> parent of 40664f2 (fix: 정답이 50/50% 일 경우 regenerated)
-=======
->>>>>>> parent of 79818ce (fix: remove suduku)
-=======
->>>>>>> parent of 79818ce (fix: remove suduku)
 }
