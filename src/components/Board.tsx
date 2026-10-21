@@ -1,7 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import { BoardSize, CellState, ThreadEffect } from '../types';
 import { PALETTE } from '../utils/puzzle';
-import { DetectiveSVG } from './DetectiveSVG';
 
 const DOUBLE_TAP_MS = 360;
 const LONG_PRESS_MS = 480;
@@ -258,10 +257,9 @@ export const Board: React.FC<BoardProps> = ({
 
               {/* Detective Placed Chip */}
               {cellMark === 2 && (
-                <div className="absolute inset-[6%] rounded-md flex items-center justify-center cell-chip pointer-events-none">
-                  <div className="w-[82%] h-[82%]">
-                    <DetectiveSVG fill="#3a1d07" />
-                  </div>
+                <div className="coin-flip absolute inset-[6%] flex items-center justify-center pointer-events-none" aria-label="221B coin">
+                  <img className="coin-face coin-back" src="/assets/coins/coin_back.png" alt="" draggable={false} />
+                  <img className="coin-face coin-front" src="/assets/coins/coin_front.png" alt="" draggable={false} />
                 </div>
               )}
               {comboCell?.index === idx && (

@@ -179,7 +179,7 @@ export const storage = {
   resetAll() {
     try {
       Object.keys(localStorage).forEach(k => {
-        if (k.startsWith(PREFIX) || k.startsWith('sd-')) {
+        if (k.startsWith(PREFIX) || k.startsWith('sd-') || k.startsWith('sherlockdoku_')) {
           localStorage.removeItem(k);
         }
       });

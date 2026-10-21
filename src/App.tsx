@@ -533,17 +533,8 @@ export default function App() {
   // Action: Reset All Data
   const handleResetAllData = useCallback(() => {
     storage.resetAll();
-    const defaultSettings = storage.getSettings();
-    setSettings(defaultSettings);
-    setSize(6);
-    setLevel(1);
-    setMaxUnlocked(1);
-    setRecords([]);
-    const inventory = storage.loadAutoClearInventory();
-    setAutoClearCount(inventory);
-    setAutoClearUsed(false);
-    initLevel(6, 1);
-  }, [initLevel]);
+    window.location.reload();
+  }, []);
 
   // Calculate current placed count
   const placedCount = marks.filter(m => m === 2).length;
@@ -652,16 +643,21 @@ export default function App() {
 
       {isRestartConfirmOpen && (
         <div
-          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[#1e0f05]/75 backdrop-blur-sm animate-fade-in"
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[#1e0f05]/70 backdrop-blur-[2px] animate-fade-in"
           role="presentation"
           onClick={event => { if (event.target === event.currentTarget) setIsRestartConfirmOpen(false); }}
         >
-          <section className="w-full max-w-[360px] rounded-2xl border-[5px] border-[#7a4a24] bg-gradient-to-b from-[#fbe9c8] to-[#f1d4a2] p-5 text-center text-[#4a2a12] shadow-[0_6px_0_#4a2c14,0_20px_50px_rgba(0,0,0,0.6)]" role="dialog" aria-modal="true" aria-labelledby="restart-confirm-title">
-            <h2 id="restart-confirm-title" className="m-0 font-serif text-lg font-black">{translate(settings.language, 'tRetry')}</h2>
-            <p className="my-4 text-sm font-semibold">{translate(settings.language, 'restartConfirm')}</p>
-            <div className="flex gap-3">
-              <button className="wood-button flex-1 rounded-xl py-2.5 font-black" onClick={() => { setIsRestartConfirmOpen(false); handleRestartCase(); }}>{translate(settings.language, 'yes')}</button>
-              <button className="wood-button flex-1 rounded-xl py-2.5 font-black" onClick={() => setIsRestartConfirmOpen(false)}>{translate(settings.language, 'no')}</button>
+          <section className="relative w-full max-w-[380px] overflow-hidden rounded-2xl border-[5px] border-[#7a4a24] bg-gradient-to-b from-[#fbe9c8] to-[#f1d4a2] text-center text-[#4a2a12] shadow-[0_6px_0_#4a2c14,0_20px_50px_rgba(0,0,0,0.6)]" role="dialog" aria-modal="true" aria-labelledby="restart-confirm-title">
+            <header className="relative bg-gradient-to-r from-[#8f5d34] to-[#6e4323] px-6 py-3.5 text-[#fff1d6] shadow-md">
+              <h2 id="restart-confirm-title" className="m-0 font-serif text-lg font-black tracking-widest sm:text-xl">{translate(settings.language, 'tRetry')}</h2>
+              <button className="absolute right-4 top-3 cursor-pointer text-xl font-bold text-[#fff1d6] transition-transform hover:text-white active:scale-95" onClick={() => setIsRestartConfirmOpen(false)} aria-label={translate(settings.language, 'close')}>✕</button>
+            </header>
+            <div className="p-4 sm:p-5">
+              <p className="my-2 text-sm font-semibold">{translate(settings.language, 'restartConfirm')}</p>
+              <div className="mt-4 flex gap-3">
+                <button className="wood-button flex-1 rounded-xl py-2.5 font-black" onClick={() => { setIsRestartConfirmOpen(false); handleRestartCase(); }}>{translate(settings.language, 'yes')}</button>
+                <button className="wood-button flex-1 rounded-xl py-2.5 font-black" onClick={() => setIsRestartConfirmOpen(false)}>{translate(settings.language, 'no')}</button>
+              </div>
             </div>
           </section>
         </div>

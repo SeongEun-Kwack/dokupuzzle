@@ -132,11 +132,10 @@ body {
   box-shadow: inset 0 2px 0 rgba(255, 210, 150, 0.3), inset 0 -3px 0 rgba(0, 0, 0, 0.4), 0 8px 20px rgba(60, 30, 10, 0.45);
 }
 
-.cell-chip {
-  background: linear-gradient(#f8dfb0, #e2b273);
-  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.7), inset 0 -3px 0 rgba(130, 80, 30, 0.5), 0 3px 5px rgba(0, 0, 0, 0.4);
-  animation: pop 0.28s ease-out;
-}
+.coin-flip { transform-style: preserve-3d; animation: coin-flip-in .72s cubic-bezier(.18,.72,.28,1) both; }
+.coin-face { position: absolute; width: 100%; height: 100%; object-fit: contain; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.coin-front { transform: rotateY(180deg); }
+@keyframes coin-flip-in { from { transform: rotateY(0); } to { transform: rotateY(180deg); } }
 
 /* Animations */
 @keyframes pop {

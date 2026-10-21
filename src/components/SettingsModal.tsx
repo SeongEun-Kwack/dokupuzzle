@@ -31,10 +31,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1e0f05]/70 backdrop-blur-[2px] animate-fade-in"
     >
-      <div className="relative w-full max-w-[380px] rounded-2xl p-0 text-center bg-gradient-to-b from-[#fbe9c8] to-[#f1d4a2] border-[5px] border-[#7a4a24] shadow-[0_6px_0_#4a2c14,0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden">
+      <div className="relative w-full max-w-[380px] rounded-2xl p-0 text-center bg-gradient-to-b from-[#fbe9c8] to-[#f1d4a2] border-[5px] border-[#7a4a24] shadow-[0_6px_0_#4a2c14,0_20px_50px_rgba(0,0,0,0.6)] overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
         {/* Header */}
         <div className="relative py-3.5 px-6 bg-gradient-to-r from-[#8f5d34] to-[#6e4323] text-[#fff1d6] shadow-md">
-          <h2 className="font-serif font-black text-lg sm:text-xl tracking-widest m-0">
+          <h2 id="settings-modal-title" className="font-serif font-black text-lg sm:text-xl tracking-widest m-0">
             {translate(settings.language, 'settings')}
           </h2>
           <button
