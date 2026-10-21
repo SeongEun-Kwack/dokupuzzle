@@ -104,6 +104,19 @@ body {
 .scene-return { padding: 12px 24px; border-radius: 10px; color: #4a2a12; font-weight: 800; cursor: pointer; }
 @keyframes scene-slide-in { from { opacity: 0; transform: translateX(34px); } to { opacity: 1; transform: translateX(0); } }
 @keyframes prompt-pulse { 50% { opacity: .55; } }
+.combo-particles { position: absolute; z-index: 40; inset: 0; pointer-events: none; }
+.combo-particles i { position: absolute; left: 50%; top: 50%; width: 9px; height: 9px; border-radius: 2px; background: #ffe37b; box-shadow: 0 0 10px #ffb52f, 0 0 18px rgba(255, 185, 40, .8); animation: combo-spark .85s cubic-bezier(.12,.72,.3,1) forwards; }
+.combo-particles i:nth-child(1) { --dx: -28px; --dy: -38px; }
+.combo-particles i:nth-child(2) { --dx: 4px; --dy: -45px; }
+.combo-particles i:nth-child(3) { --dx: 32px; --dy: -26px; }
+.combo-particles i:nth-child(4) { --dx: 42px; --dy: 6px; }
+.combo-particles i:nth-child(5) { --dx: 24px; --dy: 34px; }
+.combo-particles i:nth-child(6) { --dx: -10px; --dy: 42px; }
+.combo-particles i:nth-child(7) { --dx: -38px; --dy: 23px; }
+.combo-particles i:nth-child(8) { --dx: -44px; --dy: -9px; }
+.combo-particles i:nth-child(9) { --dx: 2px; --dy: 23px; animation-delay: .05s; }
+.combo-particles i:nth-child(10) { --dx: 17px; --dy: -5px; animation-delay: .08s; }
+@keyframes combo-spark { 0% { transform: translate(-50%, -50%) scale(.35) rotate(0); opacity: 0; } 18% { opacity: 1; } 100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(0) rotate(135deg); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .scene-shell, .scene-prompt { animation: none; } }
 
 /* Board frame & Cell styling */

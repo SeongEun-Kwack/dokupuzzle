@@ -1,17 +1,19 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import { BoardSize, CellState, ThreadEffect, ToolType } from '../types';
+import { BoardSize, CellState, ThreadEffect } from '../types';
 import { PALETTE } from '../utils/puzzle';
 import { DetectiveSVG } from './DetectiveSVG';
+
+const DOUBLE_TAP_MS = 400;
 
 interface BoardProps {
   n: BoardSize;
   regions: number[][];
   marks: CellState[];
-  tool: ToolType;
   badCell: number | null;
   hintCell: number | null;
   zoneCells: number[];
   threadEffect: ThreadEffect | null;
+  comboCell: { index: number; id: number } | null;
   onCellClick: (index: number) => void;
   onCellDragMark: (index: number, val: 0 | 1) => void;
   onCellPlace: (index: number) => void;
@@ -21,11 +23,11 @@ export const Board: React.FC<BoardProps> = ({
   n,
   regions,
   marks,
-  tool,
   badCell,
   hintCell,
   zoneCells,
   threadEffect,
+  comboCell,
   onCellClick,
   onCellDragMark,
   onCellPlace
@@ -33,6 +35,17 @@ export const Board: React.FC<BoardProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [dragVal, setDragVal] = useState<0 | 1 | null>(null);
   const lastTapRef = useRef<{ i: number; t: number }>({ i: -1, t: 0 });
+  const pressRef = useRef<{
+    i: number;
+    val: 0 | 1;
+    dragging: boolean;
+    longPressed: boolean;
+    timer: ReturnType<typeof setTimeout> | null;
+  } | null>(null);
+  const suppressPointerUpRef = useRef(false);
+  const pendingClickRef = useRef<{ index: number; timer: ReturnType<typeof setTimeout> } | null>(null);
+  const onCellClickRef = useRef(onCellClick);
+  onCellClickRef.current = onCellClick;
 
   const getRowCol = useCallback(
     (index: number): [number, number] => {
@@ -44,44 +57,94 @@ export const Board: React.FC<BoardProps> = ({
   // Global pointer up listener to cancel dragging
   useEffect(() => {
     const handlePointerUp = () => {
+      if (suppressPointerUpRef.current) {
+        suppressPointerUpRef.current = false;
+        return;
+      }
+      const press = pressRef.current;
+      if (press) {
+        if (press.timer) clearTimeout(press.timer);
+        if (!press.dragging && !press.longPressed) {
+          if (pendingClickRef.current) {
+            clearTimeout(pendingClickRef.current.timer);
+            onCellClickRef.current(pendingClickRef.current.index);
+          }
+          const index = press.i;
+          const timer = setTimeout(() => {
+            onCellClickRef.current(index);
+            pendingClickRef.current = null;
+          }, DOUBLE_TAP_MS);
+          pendingClickRef.current = { index, timer };
+        }
+        pressRef.current = null;
+      }
       setDragVal(null);
     };
     window.addEventListener('pointerup', handlePointerUp);
-    return () => window.removeEventListener('pointerup', handlePointerUp);
+    return () => {
+      window.removeEventListener('pointerup', handlePointerUp);
+      if (pressRef.current?.timer) clearTimeout(pressRef.current.timer);
+      if (pendingClickRef.current) clearTimeout(pendingClickRef.current.timer);
+    };
   }, []);
 
   const handlePointerDown = (e: React.PointerEvent, index: number) => {
     if (e.button === 2) return; // Right click handled by contextMenu
 
-    if (tool === 'agent') {
-      onCellPlace(index);
-      return;
-    }
-
     const now = Date.now();
-    if (lastTapRef.current.i === index && now - lastTapRef.current.t < 330) {
-      // Double-tap detected!
+    if (lastTapRef.current.i === index && now - lastTapRef.current.t < DOUBLE_TAP_MS) {
+      // Double-tap detected: cancel the pending short-tap elimination and place.
+      if (pendingClickRef.current) {
+        clearTimeout(pendingClickRef.current.timer);
+        pendingClickRef.current = null;
+      }
       lastTapRef.current = { i: -1, t: 0 };
+      suppressPointerUpRef.current = true;
       setDragVal(null);
       onCellPlace(index);
       return;
     }
+    if (pendingClickRef.current) {
+      clearTimeout(pendingClickRef.current.timer);
+      onCellClick(pendingClickRef.current.index);
+      pendingClickRef.current = null;
+    }
     lastTapRef.current = { i: index, t: now };
 
-    // Tool is 'x'
     if (marks[index] === 2) return; // Can't mark over placed detective
 
     const targetVal: 0 | 1 = marks[index] === 1 ? 0 : 1;
-    setDragVal(targetVal);
-    onCellDragMark(index, targetVal);
+    const press = { i: index, val: targetVal, dragging: false, longPressed: false, timer: null as ReturnType<typeof setTimeout> | null };
+    press.timer = setTimeout(() => {
+      if (pressRef.current !== press || press.dragging) return;
+      press.longPressed = true;
+      setDragVal(null);
+      onCellPlace(index);
+    }, 450);
+    pressRef.current = press;
   };
 
   const handlePointerEnter = (index: number) => {
-    if (dragVal === null) return;
-    if (marks[index] === 2) return;
-    if (marks[index] !== dragVal) {
-      onCellDragMark(index, dragVal);
+    const press = pressRef.current;
+    if (!press || press.i === index || press.longPressed) return;
+    if (!press.dragging) {
+      if (press.timer) clearTimeout(press.timer);
+      press.dragging = true;
+      setDragVal(press.val);
+      if (marks[press.i] !== press.val) onCellDragMark(press.i, press.val);
     }
+    if (dragVal !== press.val) setDragVal(press.val);
+    if (marks[index] === 2) return;
+    if (marks[index] !== press.val) {
+      onCellDragMark(index, press.val);
+    }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!pressRef.current || pressRef.current.longPressed) return;
+    const target = document.elementFromPoint(e.clientX, e.clientY)?.closest<HTMLElement>('[data-index]');
+    const index = Number(target?.dataset.index);
+    if (Number.isInteger(index) && index >= 0 && index < n * n) handlePointerEnter(index);
   };
 
   const handleContextMenu = (e: React.MouseEvent, index: number) => {
@@ -93,6 +156,7 @@ export const Board: React.FC<BoardProps> = ({
     <div className="board-frame p-2 sm:p-2.5 md:p-3.5 rounded-2xl w-full max-w-[min(100%,460px)] md:max-w-[560px] lg:max-w-[620px] mx-auto shadow-2xl relative select-none">
       <div
         ref={containerRef}
+        onPointerMove={handlePointerMove}
         className="relative w-full aspect-square rounded-lg overflow-hidden bg-[#2a170a] shadow-inner touch-none"
         style={{
           display: 'grid',
@@ -160,6 +224,11 @@ export const Board: React.FC<BoardProps> = ({
                   <div className="w-[82%] h-[82%]">
                     <DetectiveSVG fill="#3a1d07" />
                   </div>
+                </div>
+              )}
+              {comboCell?.index === idx && (
+                <div key={comboCell.id} className="combo-particles" aria-hidden="true">
+                  {Array.from({ length: 10 }, (_, particle) => <i key={particle} />)}
                 </div>
               )}
             </div>

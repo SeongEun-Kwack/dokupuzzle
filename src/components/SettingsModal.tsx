@@ -105,17 +105,23 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 {translate(settings.language, 'bgmDesc')}
               </small>
             </div>
-            <label className="relative inline-block w-13 h-7.5 shrink-0 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={settings.soundEnabled}
-                onChange={e => onUpdateSettings({ soundEnabled: e.target.checked })}
-                className="opacity-0 w-0 h-0 peer"
-              />
-              <span className="absolute inset-0 rounded-full bg-[#b89a74] transition-colors peer-checked:bg-[#5f8f3e] shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]">
-                <span className="absolute left-1 top-1 w-5.5 h-5.5 rounded-full bg-[#fff6e4] shadow-md transition-transform peer-checked:translate-x-5.5" />
+            <button
+              type="button"
+              role="switch"
+              aria-checked={settings.soundEnabled}
+              aria-label={`${translate(settings.language, 'bgm')}: ${translate(settings.language, settings.soundEnabled ? 'on' : 'off')}`}
+              onClick={() => onUpdateSettings({ soundEnabled: !settings.soundEnabled })}
+              className={`relative inline-flex h-9 w-[92px] items-center justify-center rounded-full border-2 px-2 shadow-inner transition-colors focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#d59b49]/60 ${
+                settings.soundEnabled
+                  ? 'border-[#426d2d] bg-[#5f8f3e] text-white'
+                  : 'border-[#826d57] bg-[#b8a58f] text-[#382311]'
+              }`}
+            >
+              <span className={`absolute top-1 h-6 w-6 rounded-full bg-[#fff6e4] shadow transition-all ${settings.soundEnabled ? 'left-1' : 'left-[calc(100%-28px)]'}`}>
+                <span className="absolute inset-0 grid place-items-center text-xs font-black">{settings.soundEnabled ? '♪' : '×'}</span>
               </span>
-            </label>
+              <span className="text-xs font-black tracking-wide">{translate(settings.language, settings.soundEnabled ? 'on' : 'off')}</span>
+            </button>
           </div>
 
           {/* Action buttons */}

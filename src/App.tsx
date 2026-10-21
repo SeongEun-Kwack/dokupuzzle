@@ -51,6 +51,7 @@ export default function App() {
   const [elapsed, setElapsed] = useState<number>(0);
   const [score, setScore] = useState<number>(0);
   const [combo, setCombo] = useState(false);
+  const [comboCell, setComboCell] = useState<{ index: number; id: number } | null>(null);
   const [autoClearCount, setAutoClearCount] = useState(() => storage.loadAutoClearInventory());
   const [autoClearUsed, setAutoClearUsed] = useState(false);
   const [undoStack, setUndoStack] = useState<CellState[][]>([]);
@@ -71,6 +72,7 @@ export default function App() {
   const [isTutorialOpen, setIsTutorialOpen] = useState<boolean>(false);
   const [isDossierOpen, setIsDossierOpen] = useState<boolean>(false);
   const [resultModalType, setResultModalType] = useState<'win' | 'fail' | null>(null);
+  const [isRestartConfirmOpen, setIsRestartConfirmOpen] = useState(false);
 
   // Sync BGM and sound effects to the settings toggle.
   useEffect(() => {
@@ -150,6 +152,7 @@ export default function App() {
           setElapsed(saved.elapsed ?? 0);
           setScore(saved.score ?? 0);
           setCombo(saved.combo ?? false);
+          setComboCell(null);
           setAutoClearUsed(saved.autoClearUsed ?? false);
           setUndoStack((saved.undoStack as CellState[][]) ?? []);
           setIsOver(saved.over ?? false);
@@ -162,6 +165,7 @@ export default function App() {
           setElapsed(0);
           setScore(0);
           setCombo(false);
+          setComboCell(null);
           setAutoClearUsed(false);
           setUndoStack([]);
           setIsOver(false);
@@ -230,6 +234,7 @@ export default function App() {
       isSettingsOpen ||
       isTutorialOpen ||
       isDossierOpen ||
+      isRestartConfirmOpen ||
       resultModalType !== null;
 
     if (isPaused) return;
@@ -247,7 +252,7 @@ export default function App() {
     }, 250);
 
     return () => clearInterval(interval);
-  }, [isOver, isLoadingPuzzle, isSettingsOpen, isTutorialOpen, isDossierOpen, resultModalType]);
+  }, [isOver, isLoadingPuzzle, isSettingsOpen, isTutorialOpen, isDossierOpen, isRestartConfirmOpen, resultModalType]);
 
   // Action: Cell drag / click mark (✕)
   const handleCellDragMark = useCallback(
@@ -260,8 +265,7 @@ export default function App() {
       newMarks[index] = val;
       setMarks(newMarks);
       if (val === 1 && marks[index] !== 1) {
-        setScore(prev => prev - 5);
-        setCombo(false);
+        setScore(prev => prev + 5);
       }
       sound.playMark();
     },
@@ -287,6 +291,11 @@ export default function App() {
         const nextScore = score + gained;
         setScore(nextScore);
         setCombo(true);
+        if (combo) {
+          const effect = { index, id: Date.now() };
+          setComboCell(effect);
+          setTimeout(() => setComboCell(current => current?.id === effect.id ? null : current), 950);
+        }
 
         setMarks(newMarks);
         sound.playPlace();
@@ -462,6 +471,7 @@ export default function App() {
     setElapsed(0);
     setScore(0);
     setCombo(false);
+    setComboCell(null);
     setUndoStack([]);
     setIsOver(false);
     setBadCell(null);
@@ -493,6 +503,8 @@ export default function App() {
     }
     pushUndo(marks);
     setMarks(nextMarks);
+    const clearedCount = nextMarks.filter((mark, index) => mark === 1 && marks[index] !== 1).length;
+    setScore(prev => prev + clearedCount * 5);
     setAutoClearUsed(true);
     const remaining = autoClearCount - 1;
     setAutoClearCount(remaining);
@@ -555,7 +567,6 @@ export default function App() {
           />
           <div className="w-full flex justify-between items-center px-1 text-xs font-bold text-[#6e4323]">
             <span>{translate(settings.language, 'watson')} · {translate(settings.language, 'score')}: {effectiveScore}</span>
-            {combo && <span className="text-[#a84b1d] animate-pulse">{translate(settings.language, 'combo')}</span>}
           </div>
 
           {/* Board Frame */}
@@ -572,7 +583,7 @@ export default function App() {
                 n={size}
                 regions={puzzle.regions}
                 marks={marks}
-                tool={tool}
+                comboCell={comboCell}
                 badCell={badCell}
                 hintCell={hintCell}
                 zoneCells={zoneCells}
@@ -597,7 +608,7 @@ export default function App() {
             autoClearCount={autoClearCount}
             autoClearUsed={autoClearUsed}
             onSelectTool={setTool}
-            onRestart={handleRestartCase}
+            onRestart={() => setIsRestartConfirmOpen(true)}
             onHint={handleHint}
             onAutoClear={handleAutoClear}
           />
@@ -626,6 +637,23 @@ export default function App() {
         onRestartCase={handleRestartCase}
         onResetAllData={handleResetAllData}
       />
+
+      {isRestartConfirmOpen && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-[#1e0f05]/75 backdrop-blur-sm animate-fade-in"
+          role="presentation"
+          onClick={event => { if (event.target === event.currentTarget) setIsRestartConfirmOpen(false); }}
+        >
+          <section className="w-full max-w-[360px] rounded-2xl border-[5px] border-[#7a4a24] bg-gradient-to-b from-[#fbe9c8] to-[#f1d4a2] p-5 text-center text-[#4a2a12] shadow-[0_6px_0_#4a2c14,0_20px_50px_rgba(0,0,0,0.6)]" role="dialog" aria-modal="true" aria-labelledby="restart-confirm-title">
+            <h2 id="restart-confirm-title" className="m-0 font-serif text-lg font-black">{translate(settings.language, 'tRetry')}</h2>
+            <p className="my-4 text-sm font-semibold">{translate(settings.language, 'restartConfirm')}</p>
+            <div className="flex gap-3">
+              <button className="wood-button flex-1 rounded-xl py-2.5 font-black" onClick={() => { setIsRestartConfirmOpen(false); handleRestartCase(); }}>{translate(settings.language, 'yes')}</button>
+              <button className="wood-button flex-1 rounded-xl py-2.5 font-black" onClick={() => setIsRestartConfirmOpen(false)}>{translate(settings.language, 'no')}</button>
+            </div>
+          </section>
+        </div>
+      )}
 
       {/* Tutorial Modal */}
       <TutorialModal
