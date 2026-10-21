@@ -137,7 +137,7 @@ export const DICTIONARY = {
     ]
   },
   en: {
-    title: 'The Detective's Solution',
+    title: "The Detective's Solution",
     subTitle: ' ',
     startAdventure: 'Tap anywhere to begin the case',
     loadingTitle: 'Reviewing the case files',
