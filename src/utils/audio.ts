@@ -8,8 +8,10 @@ class SoundSystem {
   private ctx: AudioContext | null = null;
   private enabled: boolean = true;
 
-  // MP3 BGM 관리를 위한 오디오 객체
+  // MP3 BGM 관리 및 덕킹(Ducking) 타이머
   private bgmAudio: HTMLAudioElement | null = null;
+  private defaultBgmVolume = 0.20; // SFX와 밸런스를 위해 기본 볼륨을 0.35 -> 0.20으로 조정
+  private bgmDuckingTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor() {
     // Initialized lazily on first user interaction
@@ -40,14 +42,13 @@ class SoundSystem {
     }
   }
 
-  // 파일 기반 BGM 재생 (생성된 음원 활용)
   public startBgm() {
     if (!this.enabled) return;
 
     if (!this.bgmAudio) {
       this.bgmAudio = new Audio('/assets/audio/bgm_waltz.mp3');
       this.bgmAudio.loop = true;
-      this.bgmAudio.volume = 0.35;
+      this.bgmAudio.volume = this.defaultBgmVolume;
     }
 
     if (this.bgmAudio.paused) {
@@ -59,6 +60,10 @@ class SoundSystem {
     if (this.bgmAudio) {
       this.bgmAudio.pause();
       this.bgmAudio.currentTime = 0;
+    }
+    if (this.bgmDuckingTimer) {
+      clearTimeout(this.bgmDuckingTimer);
+      this.bgmDuckingTimer = null;
     }
   }
 
@@ -219,21 +224,35 @@ class SoundSystem {
     }
   }
 
-  // Victory fanfare (중후하고 웅장한 추리 완성 클래식 팬파레)
- public playVictory() {
+  // Victory fanfare
+  public playVictory() {
     if (!this.enabled) return;
+
+    // 1. BGM 볼륨 덕킹: 승리 연출 시 BGM 볼륨을 0.05로 획기적으로 낮춤
+    if (this.bgmAudio && !this.bgmAudio.paused) {
+      if (this.bgmDuckingTimer) clearTimeout(this.bgmDuckingTimer);
+      this.bgmAudio.volume = 0.05;
+
+      // 승리 SFX 연출이 완료되는 약 2.1초 후 원래 BGM 볼륨으로 복구
+      this.bgmDuckingTimer = setTimeout(() => {
+        if (this.bgmAudio) {
+          this.bgmAudio.volume = this.defaultBgmVolume;
+        }
+      }, 2100);
+    }
+
     this.initCtx();
     if (!this.ctx) return;
 
     try {
       const now = this.ctx.currentTime;
 
-      // 1. 깊은 첼로/베이스 울림 (묵직한 분위기 형성)
+      // 1. 깊은 첼로/베이스 울림
       const bassOsc = this.ctx.createOscillator();
       const bassGain = this.ctx.createGain();
       bassOsc.type = 'triangle';
-      bassOsc.frequency.setValueAtTime(164.81, now); // E3
-      bassOsc.frequency.exponentialRampToValueAtTime(82.41, now + 1.2); // E2
+      bassOsc.frequency.setValueAtTime(164.81, now);
+      bassOsc.frequency.exponentialRampToValueAtTime(82.41, now + 1.2);
       bassGain.gain.setValueAtTime(0.22, now);
       bassGain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
       bassOsc.connect(bassGain);
@@ -241,8 +260,8 @@ class SoundSystem {
       bassOsc.start(now);
       bassOsc.stop(now + 1.2);
 
-      // 2. 빠른 하프시코드/오르골 아르페지오 (단서들이 하나로 연결되는 느낌)
-      const arpeggioNotes = [329.63, 392.00, 493.88, 659.25, 783.99, 987.77, 1318.51]; // Em9 상승
+      // 2. 오르골/하프시코드 아르페지오
+      const arpeggioNotes = [329.63, 392.00, 493.88, 659.25, 783.99, 987.77, 1318.51];
       arpeggioNotes.forEach((freq, idx) => {
         if (!this.ctx) return;
         const osc = this.ctx.createOscillator();
@@ -263,13 +282,13 @@ class SoundSystem {
         osc.stop(startTime + 0.55);
       });
 
-      // 3. 여운이 남는 맑은 금빛 종소리 배음 (Climax Bell Chime)
-      const bellFreqs = [1318.51, 1975.53, 2637.02]; // E6, B6, E7
+      // 3. 맑은 금빛 종소리 배음
+      const bellFreqs = [1318.51, 1975.53, 2637.02];
       bellFreqs.forEach((freq, idx) => {
         if (!this.ctx) return;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
-        const startTime = now + 0.28; // 아르페지오 최고점 도달 순간
+        const startTime = now + 0.28;
 
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, startTime);
