@@ -206,6 +206,21 @@ export const storage = {
     } catch { return 1; }
   },
 
+  loadHintInventory(): number {
+    try {
+      const value = localStorage.getItem(`${PREFIX}hint_inventory`);
+      if (value === null) {
+        localStorage.setItem(`${PREFIX}hint_inventory`, '3');
+        return 3;
+      }
+      return Math.min(3, Math.max(0, Number(value) || 0));
+    } catch { return 3; }
+  },
+
+  saveHintInventory(count: number) {
+    try { localStorage.setItem(`${PREFIX}hint_inventory`, String(Math.min(3, Math.max(0, count)))); } catch {}
+  },
+
   saveAutoClearInventory(count: number) {
     try { localStorage.setItem(`${PREFIX}auto_clear_inventory`, String(Math.min(3, Math.max(0, count)))); } catch {}
   },
