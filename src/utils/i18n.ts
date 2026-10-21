@@ -2,8 +2,8 @@ import { Language } from '../types';
 
 export const DICTIONARY = {
   ko: {
-    title: '추리 퍼즐',
-    subTitle: '연역 추리 로직 퍼즐',
+    title: '탐정의 해답',
+    subTitle: ' ',
     startAdventure: '사건을 시작하려면 화면을 누르세요',
     loadingTitle: '수사 기록 확인 중',
     integrity: '사건 파일 무결성 확인 중...',
@@ -18,9 +18,9 @@ export const DICTIONARY = {
     autoClearDesc: '현재 단서로 불가능한 칸을 표시합니다. 스테이지당 1회 사용',
     autoClearUsed: '이 스테이지에서 자동소거 아이템을 이미 사용했습니다.',
     autoClearEmpty: '자동소거 아이템이 없습니다.',
-    autoClearDone: '셜록: 불가능한 선택지를 지웠네, 왓슨.',
-    sherlockWrong: '셜록: 행과 구역의 단서를 다시 살펴보게, 왓슨.',
-    watson: '존 왓슨',
+    autoClearDone: '불가능한 선택지를 지웠네, 왓슨.',
+    sherlockWrong: '단서를 다시 살펴보게, 왓슨.',
+    watson: '왓슨 박사의 사건 기록에서',
     bgm: '사운드',
     bgmDesc: '모든 사운드',
     restartConfirm: '정말 다시할까요? 점수와 콤보는 리셋됩니다.',
@@ -42,7 +42,7 @@ export const DICTIONARY = {
       '관찰의 승리.',
       '파이프 세 대짜리 문제도 아니군.'
     ],
-    wrong: '셜록: 잘못 짚었네, 왓슨. 행과 구역의 단서를 다시 살펴보게. (명성 {c}/{m})',
+    wrong: '잘못 짚었네, 왓슨. 행과 구역의 단서를 다시 살펴보게. (명성 {c}/{m})',
     hintUsed: '힌트로 탐정 1명 배치. (남은 힌트 {h})',
     noHint: '이 사건의 힌트를 모두 썼어요.',
     restarted: '수사를 처음부터 다시 시작합니다.',
@@ -137,8 +137,8 @@ export const DICTIONARY = {
     ]
   },
   en: {
-    title: 'LOGIC PUZZLE',
-    subTitle: 'Deductive Logic Puzzle',
+    title: 'The Detective's Solution',
+    subTitle: ' ',
     startAdventure: 'Tap anywhere to begin the case',
     loadingTitle: 'Reviewing the case files',
     integrity: 'Checking case file integrity...',
@@ -155,7 +155,7 @@ export const DICTIONARY = {
     autoClearEmpty: 'No auto-clear items in inventory.',
     autoClearDone: 'Sherlock: I have eliminated the impossible, Watson.',
     sherlockWrong: 'Sherlock: Re-examine the row and district clues, Watson.',
-    watson: 'John Watson',
+    watson: 'From the casebook of Dr. John H. Watson',
     bgm: 'Sound',
     bgmDesc: 'All Sound',
     restartConfirm: 'Restart now? Your score and combo will reset.',
