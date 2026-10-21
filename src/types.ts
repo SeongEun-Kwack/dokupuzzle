@@ -25,11 +25,15 @@ export interface SavedGameState {
   statusKey: string;
   statusVars?: Record<string, any>;
   savedAt: number;
+  score?: number;
+  combo?: boolean;
+  autoClearUsed?: boolean;
 }
 
 export interface LevelRecord {
   level: number;
   timeMs: number;
+  score?: number;
   stars: number;
   hintsUsed: number;
   solvedAt: number;
@@ -38,7 +42,6 @@ export interface LevelRecord {
 export interface UserSettings {
   language: Language;
   boardSize: BoardSize;
-  autoX: boolean;
   soundEnabled: boolean;
   tutorialCompleted: boolean;
 }

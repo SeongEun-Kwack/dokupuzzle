@@ -95,37 +95,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </select>
           </div>
 
-          {/* Auto-X Row */}
+          {/* Background music Row */}
           <div className="flex items-center justify-between pb-3 border-b border-dashed border-[#6e4323]/35">
             <div>
               <span className="font-bold text-sm sm:text-base text-[#4a2a12] block">
-                {translate(settings.language, 'autoX')}
+                {translate(settings.language, 'bgm')}
               </span>
               <small className="text-[11px] sm:text-xs text-[#4a2a12]/75 block leading-tight">
-                {translate(settings.language, 'autoXDesc')}
-              </small>
-            </div>
-            <label className="relative inline-block w-13 h-7.5 shrink-0 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={settings.autoX}
-                onChange={e => onUpdateSettings({ autoX: e.target.checked })}
-                className="opacity-0 w-0 h-0 peer"
-              />
-              <span className="absolute inset-0 rounded-full bg-[#b89a74] transition-colors peer-checked:bg-[#5f8f3e] shadow-[inset_0_2px_4px_rgba(0,0,0,0.3)]">
-                <span className="absolute left-1 top-1 w-5.5 h-5.5 rounded-full bg-[#fff6e4] shadow-md transition-transform peer-checked:translate-x-5.5" />
-              </span>
-            </label>
-          </div>
-
-          {/* Sound Row */}
-          <div className="flex items-center justify-between pb-3 border-b border-dashed border-[#6e4323]/35">
-            <div>
-              <span className="font-bold text-sm sm:text-base text-[#4a2a12] block">
-                {translate(settings.language, 'sound')}
-              </span>
-              <small className="text-[11px] sm:text-xs text-[#4a2a12]/75 block leading-tight">
-                {translate(settings.language, 'soundDesc')}
+                {translate(settings.language, 'bgmDesc')}
               </small>
             </div>
             <label className="relative inline-block w-13 h-7.5 shrink-0 cursor-pointer">

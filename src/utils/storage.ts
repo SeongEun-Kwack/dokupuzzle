@@ -12,14 +12,12 @@ export const storage = {
       const lang = (localStorage.getItem(`${PREFIX}lang`) || localStorage.getItem('sherlockdoku_lang') || localStorage.getItem('sd-lang') || defaultLang) as Language;
       const sizeStr = localStorage.getItem(`${PREFIX}size`) || localStorage.getItem('sherlockdoku_size') || localStorage.getItem('sd-size') || '6';
       const size = (Number(sizeStr) || 6) as BoardSize;
-      const autoX = (localStorage.getItem(`${PREFIX}autox`) ?? localStorage.getItem('sherlockdoku_autox') ?? localStorage.getItem('sd-autox')) !== '0';
       const sound = (localStorage.getItem(`${PREFIX}sound`) ?? localStorage.getItem('sherlockdoku_sound')) !== '0';
       const tutDone = (localStorage.getItem(`${PREFIX}tut_done`) ?? localStorage.getItem('sherlockdoku_tut_done') ?? localStorage.getItem('sd-tut-done')) === '1';
 
       return {
         language: lang === 'ko' || lang === 'en' ? lang : 'ko',
         boardSize: [5, 6, 7, 8].includes(size) ? size : 6,
-        autoX,
         soundEnabled: sound,
         tutorialCompleted: tutDone
       };
@@ -27,7 +25,6 @@ export const storage = {
       return {
         language: 'ko',
         boardSize: 6,
-        autoX: true,
         soundEnabled: true,
         tutorialCompleted: false
       };
@@ -43,10 +40,6 @@ export const storage = {
       if (s.boardSize !== undefined) {
         localStorage.setItem(`${PREFIX}size`, String(s.boardSize));
         localStorage.setItem('sd-size', String(s.boardSize));
-      }
-      if (s.autoX !== undefined) {
-        localStorage.setItem(`${PREFIX}autox`, s.autoX ? '1' : '0');
-        localStorage.setItem('sd-autox', s.autoX ? '1' : '0');
       }
       if (s.soundEnabled !== undefined) {
         localStorage.setItem(`${PREFIX}sound`, s.soundEnabled ? '1' : '0');
@@ -143,11 +136,12 @@ export const storage = {
       const records = this.loadLevelRecords(size);
       const existingIdx = records.findIndex(r => r.level === record.level);
       if (existingIdx >= 0) {
-        // Keep best time
+        // Keep the highest score while retaining compatibility with older time records.
         const prev = records[existingIdx];
         records[existingIdx] = {
           ...record,
           timeMs: Math.min(prev.timeMs, record.timeMs),
+          score: Math.max(prev.score ?? 0, record.score ?? 0),
           stars: Math.max(prev.stars, record.stars)
         };
       } else {
@@ -165,6 +159,21 @@ export const storage = {
     } catch {
       return [];
     }
+  },
+
+  loadAutoClearInventory(): number {
+    try {
+      const value = localStorage.getItem(`${PREFIX}auto_clear_inventory`);
+      if (value === null) {
+        localStorage.setItem(`${PREFIX}auto_clear_inventory`, '1');
+        return 1;
+      }
+      return Math.min(5, Math.max(0, Number(value) || 0));
+    } catch { return 1; }
+  },
+
+  saveAutoClearInventory(count: number) {
+    try { localStorage.setItem(`${PREFIX}auto_clear_inventory`, String(Math.min(5, Math.max(0, count)))); } catch {}
   },
 
   resetAll() {

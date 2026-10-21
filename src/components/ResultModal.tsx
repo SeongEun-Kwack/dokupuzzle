@@ -1,7 +1,6 @@
 import React from 'react';
 import { Language } from '../types';
 import { DICTIONARY, translate } from '../utils/i18n';
-import { formatTime } from '../utils/puzzle';
 
 interface ResultModalProps {
   isOpen: boolean;
@@ -9,7 +8,7 @@ interface ResultModalProps {
   language: Language;
   level: number;
   caseName: string;
-  elapsed: number;
+  score: number;
   cover: number;
   maxCover: number;
   hintsUsed: number;
@@ -24,7 +23,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
   language,
   level,
   caseName,
-  elapsed,
+  score,
   cover,
   maxCover,
   hintsUsed,
@@ -68,9 +67,9 @@ export const ResultModal: React.FC<ResultModalProps> = ({
             {/* Stats row */}
             <div className="flex items-center justify-around w-full py-2 px-3 rounded-xl bg-[#6e4323]/10 border border-[#8a5a2b]/20 my-2 text-xs sm:text-sm text-[#4a2a12]">
               <div className="flex flex-col items-center">
-                <span className="opacity-75">{translate(language, 'time')}</span>
+                <span className="opacity-75">{translate(language, 'score')}</span>
                 <b className="font-serif text-base sm:text-lg font-black text-[#6e4323]">
-                  {formatTime(elapsed)}
+                  {score}
                 </b>
               </div>
               <div className="w-[1px] h-8 bg-[#8a5a2b]/30" />
@@ -139,7 +138,7 @@ export const ResultModal: React.FC<ResultModalProps> = ({
             {translate(language, 'failSub')}
           </p>
 
-          {/* Moriarty's Taunting Note */}
+          {/* Sherlock's investigative hint */}
           <div className="w-full text-left text-xs sm:text-[13px] leading-relaxed p-3.5 rounded-xl bg-white/50 border border-[#8f2d26]/40 my-2 text-[#4a1a14]">
             <p className="m-0 italic font-serif">"{translate(language, 'failNote')}"</p>
             <div className="text-right text-xs font-serif font-bold text-[#8f2d26] mt-2">

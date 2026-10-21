@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" fill="none">
+  <defs>
+    <linearGradient id="sky" x2="0" y2="1"><stop stop-color="#202831"/><stop offset=".56" stop-color="#76543a"/><stop offset="1" stop-color="#c08c56"/></linearGradient>
+    <linearGradient id="fog" x2="0" y2="1"><stop stop-color="#e8c99a" stop-opacity="0"/><stop offset="1" stop-color="#e8c99a" stop-opacity=".48"/></linearGradient>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h1600v1000H0z"/>
+  <circle cx="1260" cy="190" r="88" fill="#e9c68c" fill-opacity=".65"/>
+  <path fill="#20201f" d="M0 555h82V430h45V365h34v190h70V420h43v-95h25v-75h20v75h27v230h80V410h39V330h47v-94h22v94h30v225h60V425h31v-80h49v-76h20v76h28v210h83V375h35v-82h44v-65h20v65h37v262h89V390h58v-95h35v-58h20v58h34v260h100V415h51v-90h34v-70h21v70h45v230h105v-170h70V500h70v-45h78v545H0z"/>
+  <path fill="#171818" fill-opacity=".82" d="M0 700h1600v300H0z"/>
+  <path fill="#c08c56" fill-opacity=".18" d="M180 1000 650 620h80l-370 380zm1040 0 150-340h42l-80 340z"/>
+  <path fill="url(#fog)" d="M0 390h1600v610H0z"/>
+  <path stroke="#e8c99a" stroke-opacity=".2" stroke-width="3" d="M0 790c280-45 390 70 690 25s520-80 910-5M0 865c310-35 490 45 770 10s495-45 830 5"/>
+</svg>

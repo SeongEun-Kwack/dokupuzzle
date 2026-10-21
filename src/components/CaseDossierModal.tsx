@@ -2,7 +2,6 @@ import React from 'react';
 import { BoardSize, Language, LevelRecord } from '../types';
 import { DICTIONARY, translate } from '../utils/i18n';
 import { BookOpen, Award, CheckCircle } from 'lucide-react';
-import { formatTime } from '../utils/puzzle';
 
 interface CaseDossierModalProps {
   isOpen: boolean;
@@ -122,7 +121,7 @@ export const CaseDossierModal: React.FC<CaseDossierModalProps> = ({
                     }`}
                     title={
                       rec
-                        ? `${formatTime(rec.timeMs)} · ${'★'.repeat(rec.stars)}`
+                        ? `${translate(language, 'bestScore')} ${rec.score ?? 0} · ${'★'.repeat(rec.stars)}`
                         : isUnlocked
                         ? '수사 가능'
                         : '미해금 사건'

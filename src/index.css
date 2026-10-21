@@ -67,6 +67,45 @@ body {
   box-shadow: 0 2px 0 #6e1a14;
 }
 
+.scene-shell {
+  min-height: 100dvh;
+  width: 100%;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  color: #fff1d6;
+  background-color: #17120f;
+  background-image: linear-gradient(115deg, rgba(18, 13, 10, .85), rgba(36, 24, 17, .48)), url('/assets/title-bg.svg');
+  background-size: cover;
+  background-position: center;
+  animation: scene-slide-in .55s cubic-bezier(.2,.75,.25,1) both;
+}
+.scene-main { animation: scene-slide-in .45s cubic-bezier(.2,.75,.25,1) both; }
+
+.scene-title { cursor: pointer; }
+.scene-card {
+  width: min(100%, 560px);
+  padding: clamp(28px, 7vw, 56px);
+  text-align: center;
+  border: 1px solid rgba(255, 220, 168, .45);
+  border-radius: 20px;
+  background: rgba(31, 22, 16, .76);
+  box-shadow: 0 24px 80px rgba(0,0,0,.5), inset 0 0 35px rgba(160, 100, 45, .12);
+  backdrop-filter: blur(5px);
+}
+.scene-kicker { margin: 0 0 14px; color: #e0ae65; letter-spacing: .22em; font: 700 12px var(--f-cinzel); }
+.scene-card h1 { margin: 0; color: #ffdda8; font: 900 clamp(30px, 7vw, 52px) var(--f-title); }
+.scene-card p { line-height: 1.7; }
+.scene-prompt { margin-top: 42px; animation: prompt-pulse 1.4s ease-in-out infinite; }
+.scene-actor { color: #e2bd8c; font-size: 12px; letter-spacing: .16em; }
+.loading-track { height: 14px; margin: 28px 0 10px; overflow: hidden; border: 1px solid #c59450; border-radius: 999px; background: #2a1b12; }
+.loading-track span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #9a642c, #f4cc83); transition: width .18s ease; }
+.ending-quote { margin: 28px 0 36px; color: #f4dfbf; font: italic 20px/1.7 var(--f-title); }
+.scene-return { padding: 12px 24px; border-radius: 10px; color: #4a2a12; font-weight: 800; cursor: pointer; }
+@keyframes scene-slide-in { from { opacity: 0; transform: translateX(34px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes prompt-pulse { 50% { opacity: .55; } }
+@media (prefers-reduced-motion: reduce) { .scene-shell, .scene-prompt { animation: none; } }
+
 /* Board frame & Cell styling */
 .board-frame {
   background: linear-gradient(135deg, #7d4e2a, #5a3519);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   BoardSize,
   CellState,
@@ -24,8 +24,11 @@ import { OrientationLock } from './components/OrientationLock';
 
 const MAX_COVER = 3;
 const HINT_MAX = 3;
+const MAX_AUTO_CLEAR = 5;
 
 export default function App() {
+  const [scene, setScene] = useState<'title' | 'loading' | 'main' | 'ending'>('title');
+  const [loadProgress, setLoadProgress] = useState(0);
   // Settings
   const [settings, setSettings] = useState<UserSettings>(() => storage.getSettings());
 
@@ -46,6 +49,10 @@ export default function App() {
   const [cover, setCover] = useState<number>(MAX_COVER);
   const [hintsLeft, setHintsLeft] = useState<number>(HINT_MAX);
   const [elapsed, setElapsed] = useState<number>(0);
+  const [score, setScore] = useState<number>(0);
+  const [combo, setCombo] = useState(false);
+  const [autoClearCount, setAutoClearCount] = useState(() => storage.loadAutoClearInventory());
+  const [autoClearUsed, setAutoClearUsed] = useState(false);
   const [undoStack, setUndoStack] = useState<CellState[][]>([]);
   const [isOver, setIsOver] = useState<boolean>(false);
   const [tool, setTool] = useState<ToolType>('x');
@@ -65,10 +72,33 @@ export default function App() {
   const [isDossierOpen, setIsDossierOpen] = useState<boolean>(false);
   const [resultModalType, setResultModalType] = useState<'win' | 'fail' | null>(null);
 
-  // Sync sound setting to sound singleton
+  // Sync BGM and sound effects to the settings toggle.
   useEffect(() => {
     sound.setEnabled(settings.soundEnabled);
-  }, [settings.soundEnabled]);
+    if (settings.soundEnabled && scene !== 'title') sound.startBgm();
+    else sound.stopBgm();
+  }, [settings.soundEnabled, scene]);
+
+  useEffect(() => () => sound.stopBgm(), []);
+
+  const beginCase = () => {
+    setScene('loading');
+    setLoadProgress(0);
+    if (settings.soundEnabled) sound.startBgm();
+    let progress = 0;
+    const timer = window.setInterval(() => {
+      progress = Math.min(100, progress + 10);
+      setLoadProgress(progress);
+      if (progress === 100) {
+        window.clearInterval(timer);
+        // Read the persisted case data as part of the loading integrity pass.
+        storage.loadActiveCase();
+        storage.loadLevelRecords(size);
+        storage.loadAutoClearInventory();
+        setScene('main');
+      }
+    }, 90);
+  };
 
   // Sync language attribute to html document
   useEffect(() => {
@@ -118,6 +148,9 @@ export default function App() {
           setCover(saved.cover ?? MAX_COVER);
           setHintsLeft(saved.hintsLeft ?? HINT_MAX);
           setElapsed(saved.elapsed ?? 0);
+          setScore(saved.score ?? 0);
+          setCombo(saved.combo ?? false);
+          setAutoClearUsed(saved.autoClearUsed ?? false);
           setUndoStack((saved.undoStack as CellState[][]) ?? []);
           setIsOver(saved.over ?? false);
           setStatusText(translate(settings.language, 'resumed'));
@@ -127,6 +160,9 @@ export default function App() {
           setCover(MAX_COVER);
           setHintsLeft(HINT_MAX);
           setElapsed(0);
+          setScore(0);
+          setCombo(false);
+          setAutoClearUsed(false);
           setUndoStack([]);
           setIsOver(false);
           const tagNames = DICTIONARY[settings.language]?.tags || DICTIONARY.ko.tags;
@@ -160,6 +196,9 @@ export default function App() {
       cover,
       hintsLeft,
       elapsed,
+      score,
+      combo,
+      autoClearUsed,
       undoStack,
       over: isOver,
       isSolved: false,
@@ -173,6 +212,9 @@ export default function App() {
     cover,
     hintsLeft,
     elapsed,
+    score,
+    combo,
+    autoClearUsed,
     undoStack,
     isOver,
     isLoadingPuzzle,
@@ -217,6 +259,10 @@ export default function App() {
       const newMarks = [...marks];
       newMarks[index] = val;
       setMarks(newMarks);
+      if (val === 1 && marks[index] !== 1) {
+        setScore(prev => prev - 5);
+        setCombo(false);
+      }
       sound.playMark();
     },
     [isOver, isLoadingPuzzle, marks, pushUndo]
@@ -237,23 +283,10 @@ export default function App() {
         const newMarks = [...marks];
         newMarks[index] = 2;
 
-        // Auto-X feature: Mark all impossible cells in same row, column, region, and 8 neighbors
-        if (settings.autoX) {
-          const regionIdx = puzzle.regions[r][c];
-          for (let j = 0; j < size * size; j++) {
-            if (newMarks[j] !== 0) continue;
-            const r2 = Math.floor(j / size);
-            const c2 = j % size;
-            const isSameRow = r2 === r;
-            const isSameCol = c2 === c;
-            const isSameRegion = puzzle.regions[r2][c2] === regionIdx;
-            const isNeighbor = Math.abs(r2 - r) <= 1 && Math.abs(c2 - c) <= 1;
-
-            if (isSameRow || isSameCol || isSameRegion || isNeighbor) {
-              newMarks[j] = 1;
-            }
-          }
-        }
+        const gained = combo ? 150 : 100;
+        const nextScore = score + gained;
+        setScore(nextScore);
+        setCombo(true);
 
         setMarks(newMarks);
         sound.playPlace();
@@ -291,7 +324,7 @@ export default function App() {
           setIsOver(true);
           sound.playVictory();
 
-          // Save progression & records in localStorage
+          // Save progression and the highest score for this case.
           const nextLevel = level + 1;
           storage.saveProgress(size, nextLevel);
           setMaxUnlocked(storage.loadProgress(size));
@@ -299,11 +332,18 @@ export default function App() {
           const record: LevelRecord = {
             level,
             timeMs: elapsed,
+            score: nextScore - Math.max(0, Math.floor(elapsed / 1000) - 180),
             stars: cover,
             hintsUsed: HINT_MAX - hintsLeft,
             solvedAt: Date.now()
           };
+          const alreadySolved = records.some(item => item.level === level);
           storage.saveLevelRecord(size, record);
+          if (!alreadySolved && level % 3 === 0) {
+            const nextInventory = Math.min(MAX_AUTO_CLEAR, storage.loadAutoClearInventory() + 1);
+            storage.saveAutoClearInventory(nextInventory);
+            setAutoClearCount(nextInventory);
+          }
           setRecords(storage.loadLevelRecords(size));
           storage.clearGameState(size, level);
 
@@ -314,6 +354,8 @@ export default function App() {
       } else {
         // Incorrect placement!
         sound.playWrong();
+        setScore(prev => prev - 5);
+        setCombo(false);
         const nextCover = cover - 1;
         setCover(nextCover);
 
@@ -345,13 +387,15 @@ export default function App() {
       puzzle,
       marks,
       size,
-      settings.autoX,
       settings.language,
       pushUndo,
       cover,
+      combo,
+      score,
       elapsed,
       hintsLeft,
-      level
+      level,
+      records
     ]
   );
 
@@ -416,6 +460,8 @@ export default function App() {
     setCover(MAX_COVER);
     setHintsLeft(HINT_MAX);
     setElapsed(0);
+    setScore(0);
+    setCombo(false);
     setUndoStack([]);
     setIsOver(false);
     setBadCell(null);
@@ -424,6 +470,35 @@ export default function App() {
     setThreadEffect(null);
     setStatusText(translate(settings.language, 'restarted'));
   }, [size, level, settings.language]);
+
+  const handleAutoClear = useCallback(() => {
+    if (autoClearUsed) {
+      setStatusText(translate(settings.language, 'autoClearUsed'));
+      return;
+    }
+    if (autoClearCount <= 0 || !puzzle) {
+      setStatusText(translate(settings.language, 'autoClearEmpty'));
+      return;
+    }
+    const nextMarks = [...marks];
+    for (let i = 0; i < nextMarks.length; i++) {
+      if (nextMarks[i] !== 0) continue;
+      const r = Math.floor(i / size), c = i % size;
+      const impossible = marks.some((mark, placedIdx) => {
+        if (mark !== 2) return false;
+        const pr = Math.floor(placedIdx / size), pc = placedIdx % size;
+        return r === pr || c === pc || puzzle.regions[r][c] === puzzle.regions[pr][pc] || (Math.abs(r - pr) <= 1 && Math.abs(c - pc) <= 1);
+      });
+      if (impossible) nextMarks[i] = 1;
+    }
+    pushUndo(marks);
+    setMarks(nextMarks);
+    setAutoClearUsed(true);
+    const remaining = autoClearCount - 1;
+    setAutoClearCount(remaining);
+    storage.saveAutoClearInventory(remaining);
+    setStatusText(translate(settings.language, 'autoClearDone'));
+  }, [autoClearUsed, autoClearCount, puzzle, marks, size, settings.language, pushUndo]);
 
   // Action: Reset All Data
   const handleResetAllData = useCallback(() => {
@@ -434,14 +509,25 @@ export default function App() {
     setLevel(1);
     setMaxUnlocked(1);
     setRecords([]);
+    const inventory = storage.loadAutoClearInventory();
+    setAutoClearCount(inventory);
+    setAutoClearUsed(false);
     initLevel(6, 1);
   }, [initLevel]);
 
   // Calculate current placed count
   const placedCount = marks.filter(m => m === 2).length;
 
+  if (scene === 'title') return <div className="scene-shell scene-title" onClick={beginCase} role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') beginCase(); }}>
+    <div className="scene-card"><p className="scene-kicker">221B BAKER STREET</p><h1>{translate(settings.language, 'title')}</h1><p>{translate(settings.language, 'subTitle')}</p><p className="scene-prompt">{translate(settings.language, 'startAdventure')}</p><span className="scene-actor">{translate(settings.language, 'watson')}</span></div>
+  </div>;
+  if (scene === 'loading') return <div className="scene-shell scene-loading"><div className="scene-card"><p className="scene-kicker">SHERLOCK & WATSON</p><h1>{translate(settings.language, 'loadingTitle')}</h1><p>{loadProgress < 100 ? translate(settings.language, 'integrity') : translate(settings.language, 'loadingDone')}</p><div className="loading-track"><span style={{ width: `${loadProgress}%` }} /></div><strong>{loadProgress}%</strong></div></div>;
+  if (scene === 'ending') return <div className="scene-shell scene-ending"><div className="scene-card"><p className="scene-kicker">DR. JOHN H. WATSON</p><h1>{translate(settings.language, 'endingTitle')}</h1><p className="ending-quote">“{translate(settings.language, 'endingText')}”</p><button className="wood-button scene-return" onClick={() => { setLevel(1); setScene('title'); }}>{translate(settings.language, 'returnTitle')}</button></div></div>;
+
+  const effectiveScore = score - Math.max(0, Math.floor(elapsed / 1000) - 180);
+
   return (
-    <div className="min-h-screen min-h-[100dvh] flex items-center justify-center py-2 sm:py-4 px-2 sm:px-4">
+    <div className="scene-main min-h-screen min-h-[100dvh] flex items-center justify-center py-2 sm:py-4 px-2 sm:px-4">
       {/* Centered Main Game Container */}
       <div className="flex items-center justify-center w-full">
         <main className="app-container tablet-layout w-full max-w-[460px] md:max-w-[680px] lg:max-w-[740px] flex flex-col gap-2.5 sm:gap-3 items-center">
@@ -450,20 +536,14 @@ export default function App() {
             language={settings.language}
             level={level}
             caseName={caseName}
-            elapsed={elapsed}
-            bestTime={records.find(r => r.level === level)?.timeMs ?? null}
+            score={effectiveScore}
+            bestScore={records.find(r => r.level === level)?.score ?? null}
             canPrev={level > 1}
             canNext={level < maxUnlocked}
-            soundEnabled={settings.soundEnabled}
             onPrev={() => setLevel(l => Math.max(1, l - 1))}
             onNext={() => setLevel(l => Math.min(maxUnlocked, l + 1))}
             onOpenDossier={() => setIsDossierOpen(true)}
             onOpenSettings={() => setIsSettingsOpen(true)}
-            onToggleSound={() => {
-              const nextVal = !settings.soundEnabled;
-              setSettings(s => ({ ...s, soundEnabled: nextVal }));
-              storage.saveSettings({ soundEnabled: nextVal });
-            }}
           />
 
           {/* Progress bar and fame / lives */}
@@ -473,6 +553,10 @@ export default function App() {
             cover={cover}
             maxCover={MAX_COVER}
           />
+          <div className="w-full flex justify-between items-center px-1 text-xs font-bold text-[#6e4323]">
+            <span>{translate(settings.language, 'watson')} · {translate(settings.language, 'score')}: {effectiveScore}</span>
+            {combo && <span className="text-[#a84b1d] animate-pulse">{translate(settings.language, 'combo')}</span>}
+          </div>
 
           {/* Board Frame */}
           <div className="w-full relative tablet-board">
@@ -510,9 +594,12 @@ export default function App() {
             language={settings.language}
             tool={tool}
             hintsLeft={hintsLeft}
+            autoClearCount={autoClearCount}
+            autoClearUsed={autoClearUsed}
             onSelectTool={setTool}
             onRestart={handleRestartCase}
             onHint={handleHint}
+            onAutoClear={handleAutoClear}
           />
         </main>
       </div>
@@ -558,13 +645,14 @@ export default function App() {
         language={settings.language}
         level={level}
         caseName={caseName}
-        elapsed={elapsed}
+        score={effectiveScore}
         cover={cover}
         maxCover={MAX_COVER}
         hintsUsed={HINT_MAX - hintsLeft}
         onNextCase={() => {
           setResultModalType(null);
-          setLevel(l => l + 1);
+          if (level >= 16) setScene('ending');
+          else setLevel(l => l + 1);
         }}
         onRetry={() => {
           setResultModalType(null);

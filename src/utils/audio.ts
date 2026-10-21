@@ -1,6 +1,8 @@
 class SoundSystem {
   private ctx: AudioContext | null = null;
   private enabled: boolean = true;
+  private bgmTimer: ReturnType<typeof setInterval> | null = null;
+  private bgmStep = 0;
 
   constructor() {
     // Initialized lazily on first user interaction
@@ -8,10 +10,41 @@ class SoundSystem {
 
   public setEnabled(val: boolean) {
     this.enabled = val;
+    if (!val) this.stopBgm();
   }
 
   public isEnabled(): boolean {
     return this.enabled;
+  }
+
+  public startBgm() {
+    if (!this.enabled || this.bgmTimer) return;
+    this.initCtx();
+    if (!this.ctx) return;
+    const melody = [659, 784, 880, 659, 587, 698, 784, 587, 523, 659, 784, 880, 784, 698, 587, 523];
+    const playStep = () => {
+      if (!this.ctx || !this.enabled) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(melody[this.bgmStep % melody.length], now);
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.035, now + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.15);
+      this.bgmStep++;
+    };
+    playStep();
+    this.bgmTimer = setInterval(playStep, 175);
+  }
+
+  public stopBgm() {
+    if (this.bgmTimer) clearInterval(this.bgmTimer);
+    this.bgmTimer = null;
   }
 
   private initCtx() {
