@@ -7,7 +7,7 @@ class SoundSystem {
   private lastComboVoiceIndex = -1;
   private ctx: AudioContext | null = null;
   private enabled: boolean = true;
-  
+
   // MP3 BGM 관리를 위한 오디오 객체
   private bgmAudio: HTMLAudioElement | null = null;
 
@@ -45,7 +45,7 @@ class SoundSystem {
     if (!this.enabled) return;
 
     if (!this.bgmAudio) {
-      this.bgmAudio = new Audio('/assets/audio/bgm_waltz.mp3'); // mp3 파일 경로
+      this.bgmAudio = new Audio('/assets/audio/bgm_waltz.mp3');
       this.bgmAudio.loop = true;
       this.bgmAudio.volume = 0.35;
     }
@@ -211,4 +211,54 @@ class SoundSystem {
         osc.connect(gain);
         gain.connect(this.ctx.destination);
 
-        osc.start
+        osc.start(now + idx * 0.08);
+        osc.stop(now + idx * 0.08 + 0.4);
+      });
+    } catch {
+      // Ignore
+    }
+  }
+
+  // Victory fanfare (중후하고 웅장한 추리 완성 클래식 팬파레)
+  public playVictory() {
+    if (!this.enabled) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    try {
+      const now = this.ctx.currentTime;
+
+      const chordSteps = [
+        { time: 0, duration: 0.28, notes: [146.83, 293.66, 349.23], type: 'sawtooth' as OscillatorType, vol: 0.12 },
+        { time: 0.22, duration: 0.28, notes: [116.54, 233.08, 349.23, 466.16], type: 'sawtooth' as OscillatorType, vol: 0.14 },
+        { time: 0.44, duration: 0.35, notes: [110.00, 220.00, 277.18, 329.63, 440.00], type: 'sawtooth' as OscillatorType, vol: 0.16 },
+        { time: 0.72, duration: 1.5, notes: [73.42, 146.83, 220.00, 293.66, 370.00, 587.33], type: 'triangle' as OscillatorType, vol: 0.22 }
+      ];
+
+      chordSteps.forEach(step => {
+        step.notes.forEach(freq => {
+          if (!this.ctx) return;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+
+          osc.type = step.type;
+          osc.frequency.setValueAtTime(freq, now + step.time);
+
+          gain.gain.setValueAtTime(0.001, now + step.time);
+          gain.gain.linearRampToValueAtTime(step.vol, now + step.time + 0.03);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + step.time + step.duration);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          osc.start(now + step.time);
+          osc.stop(now + step.time + step.duration + 0.05);
+        });
+      });
+    } catch {
+      // Ignore
+    }
+  }
+}
+
+export const sound = new SoundSystem();
