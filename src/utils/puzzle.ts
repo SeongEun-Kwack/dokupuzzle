@@ -199,19 +199,25 @@ function logicSolve(regions: number[][], n: number): LogicResult {
     let progress = false;
 
     // Lv1: 유닛에 남은 후보가 하나뿐이면 그 칸에 배치한다.
-    let single = -1;
+    const singles = new Set<number>();
     for (const unit of units) {
       if (unit.some(cell => placed[cell])) continue;
       const remaining = unit.filter(cell => candidates[cell]);
       if (!remaining.length) return { solved: false, level, solution: null };
-      if (remaining.length === 1) {
-        if (single !== -1 && single !== remaining[0]) return { solved: false, level, solution: null };
-        single = remaining[0];
-      }
+      if (remaining.length === 1) singles.add(remaining[0]);
     }
-    if (single !== -1) {
-      place(candidates, placed, single);
-      placedCount++;
+    if (singles.size) {
+      const forced = [...singles];
+      for (let i = 0; i < forced.length; i++) {
+        for (let j = i + 1; j < forced.length; j++) {
+          if (conflicts[forced[i] * cellCount + forced[j]]) return { solved: false, level, solution: null };
+        }
+      }
+      for (const cell of forced) {
+        if (placed[cell]) continue;
+        place(candidates, placed, cell);
+        placedCount++;
+      }
       level = Math.max(level, 1);
       continue;
     }
