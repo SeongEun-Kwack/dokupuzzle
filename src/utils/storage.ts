@@ -1,0 +1,179 @@
+import { BoardSize, Language, LevelRecord, SavedGameState, UserSettings } from '../types';
+
+const PREFIX = 'logicpuzzle_';
+
+export const storage = {
+  // Settings
+  getSettings(): UserSettings {
+    try {
+      const defaultLang: Language =
+        typeof navigator !== 'undefined' && (navigator.language || '').startsWith('ko') ? 'ko' : 'en';
+
+      const lang = (localStorage.getItem(`${PREFIX}lang`) || localStorage.getItem('sherlockdoku_lang') || localStorage.getItem('sd-lang') || defaultLang) as Language;
+      const sizeStr = localStorage.getItem(`${PREFIX}size`) || localStorage.getItem('sherlockdoku_size') || localStorage.getItem('sd-size') || '6';
+      const size = (Number(sizeStr) || 6) as BoardSize;
+      const autoX = (localStorage.getItem(`${PREFIX}autox`) ?? localStorage.getItem('sherlockdoku_autox') ?? localStorage.getItem('sd-autox')) !== '0';
+      const sound = (localStorage.getItem(`${PREFIX}sound`) ?? localStorage.getItem('sherlockdoku_sound')) !== '0';
+      const tutDone = (localStorage.getItem(`${PREFIX}tut_done`) ?? localStorage.getItem('sherlockdoku_tut_done') ?? localStorage.getItem('sd-tut-done')) === '1';
+
+      return {
+        language: lang === 'ko' || lang === 'en' ? lang : 'ko',
+        boardSize: [5, 6, 7, 8].includes(size) ? size : 6,
+        autoX,
+        soundEnabled: sound,
+        tutorialCompleted: tutDone
+      };
+    } catch {
+      return {
+        language: 'ko',
+        boardSize: 6,
+        autoX: true,
+        soundEnabled: true,
+        tutorialCompleted: false
+      };
+    }
+  },
+
+  saveSettings(s: Partial<UserSettings>) {
+    try {
+      if (s.language !== undefined) {
+        localStorage.setItem(`${PREFIX}lang`, s.language);
+        localStorage.setItem('sd-lang', s.language);
+      }
+      if (s.boardSize !== undefined) {
+        localStorage.setItem(`${PREFIX}size`, String(s.boardSize));
+        localStorage.setItem('sd-size', String(s.boardSize));
+      }
+      if (s.autoX !== undefined) {
+        localStorage.setItem(`${PREFIX}autox`, s.autoX ? '1' : '0');
+        localStorage.setItem('sd-autox', s.autoX ? '1' : '0');
+      }
+      if (s.soundEnabled !== undefined) {
+        localStorage.setItem(`${PREFIX}sound`, s.soundEnabled ? '1' : '0');
+      }
+      if (s.tutorialCompleted !== undefined) {
+        localStorage.setItem(`${PREFIX}tut_done`, s.tutorialCompleted ? '1' : '0');
+        localStorage.setItem('sd-tut-done', s.tutorialCompleted ? '1' : '0');
+      }
+    } catch (e) {
+      console.warn('LocalStorage save failed:', e);
+    }
+  },
+
+  // Active playing position
+  saveActiveCase(size: BoardSize, level: number) {
+    try {
+      localStorage.setItem(`${PREFIX}active_size`, String(size));
+      localStorage.setItem(`${PREFIX}active_level_${size}`, String(level));
+    } catch {}
+  },
+
+  loadActiveCase(): { size: BoardSize; level: number } {
+    try {
+      const sizeStr = localStorage.getItem(`${PREFIX}active_size`);
+      const size = (sizeStr ? Number(sizeStr) : this.getSettings().boardSize) as BoardSize;
+      const validSize = [5, 6, 7, 8].includes(size) ? size : 6;
+
+      const levelStr = localStorage.getItem(`${PREFIX}active_level_${validSize}`);
+      const maxUnlocked = this.loadProgress(validSize);
+      const level = levelStr ? Math.min(Math.max(1, Number(levelStr)), maxUnlocked) : 1;
+
+      return { size: validSize, level };
+    } catch {
+      return { size: 6, level: 1 };
+    }
+  },
+
+  // Level Progression (Maximum level reached)
+  loadProgress(size: BoardSize): number {
+    try {
+      const v = localStorage.getItem(`${PREFIX}prog_${size}`) || localStorage.getItem(`sd-prog-${size}`);
+      return Math.max(1, Number(v) || 1);
+    } catch {
+      return 1;
+    }
+  },
+
+  saveProgress(size: BoardSize, level: number) {
+    try {
+      const current = this.loadProgress(size);
+      if (level > current) {
+        localStorage.setItem(`${PREFIX}prog_${size}`, String(level));
+        localStorage.setItem(`sd-prog-${size}`, String(level));
+      }
+    } catch {}
+  },
+
+  // In-progress Game State (Restored after closing/refreshing)
+  saveGameState(state: SavedGameState) {
+    try {
+      const key = `${PREFIX}state_${state.n}_${state.level}`;
+      localStorage.setItem(key, JSON.stringify(state));
+    } catch (e) {
+      console.warn('Failed to save in-progress game state:', e);
+    }
+  },
+
+  loadGameState(size: BoardSize, level: number): SavedGameState | null {
+    try {
+      const key = `${PREFIX}state_${size}_${level}`;
+      const json = localStorage.getItem(key);
+      if (!json) return null;
+      const data = JSON.parse(json) as SavedGameState;
+      if (data && data.n === size && data.level === level && Array.isArray(data.marks)) {
+        return data;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  },
+
+  clearGameState(size: BoardSize, level: number) {
+    try {
+      const key = `${PREFIX}state_${size}_${level}`;
+      localStorage.removeItem(key);
+    } catch {}
+  },
+
+  // Solved Level Records
+  saveLevelRecord(size: BoardSize, record: LevelRecord) {
+    try {
+      const key = `${PREFIX}records_${size}`;
+      const records = this.loadLevelRecords(size);
+      const existingIdx = records.findIndex(r => r.level === record.level);
+      if (existingIdx >= 0) {
+        // Keep best time
+        const prev = records[existingIdx];
+        records[existingIdx] = {
+          ...record,
+          timeMs: Math.min(prev.timeMs, record.timeMs),
+          stars: Math.max(prev.stars, record.stars)
+        };
+      } else {
+        records.push(record);
+      }
+      localStorage.setItem(key, JSON.stringify(records));
+    } catch {}
+  },
+
+  loadLevelRecords(size: BoardSize): LevelRecord[] {
+    try {
+      const key = `${PREFIX}records_${size}`;
+      const json = localStorage.getItem(key);
+      return json ? JSON.parse(json) : [];
+    } catch {
+      return [];
+    }
+  },
+
+  resetAll() {
+    try {
+      Object.keys(localStorage).forEach(k => {
+        if (k.startsWith(PREFIX) || k.startsWith('sd-')) {
+          localStorage.removeItem(k);
+        }
+      });
+    } catch {}
+  }
+};

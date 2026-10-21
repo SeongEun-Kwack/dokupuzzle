@@ -1,0 +1,256 @@
+@import "tailwindcss";
+
+:root {
+  --f-title: "Nanum Myeongjo", serif;
+  --f-ui: "Gowun Dodum", sans-serif;
+  --f-cinzel: "Cinzel", serif;
+  --f-mono: "Special Elite", monospace;
+  --dk: #4a2a12;
+  --wood-d: #6e4323;
+  --cream: #fff1d6;
+  --red: #b8322a;
+}
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  min-height: 100dvh;
+  touch-action: manipulation;
+}
+
+body {
+  font-family: var(--f-ui);
+  color: var(--dk);
+  user-select: none;
+  -webkit-user-select: none;
+  background-color: #d9a467;
+  background-image:
+    repeating-linear-gradient(90deg, transparent 0 118px, rgba(90, 50, 20, 0.25) 118px 120px),
+    repeating-linear-gradient(90deg, rgba(120, 70, 30, 0.07) 0 2px, transparent 2px 9px),
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.06) 0 1px, transparent 1px 23px),
+    linear-gradient(90deg, #d49d5e, #e3b67b 25%, #d29b5c 50%, #e1b276 75%, #d49d5e);
+  background-attachment: fixed;
+}
+
+/* Wood & Brass panel styling */
+.wood-panel {
+  background: linear-gradient(145deg, #8f5d34, #6e4323);
+  box-shadow: inset 0 2px 0 rgba(255, 220, 170, 0.25), inset 0 -3px 0 rgba(0, 0, 0, 0.3), 0 4px 10px rgba(60, 30, 10, 0.35);
+}
+
+.wood-button {
+  background: linear-gradient(#f3cf94, #d9a25e);
+  border: 2px solid #8a5a2b;
+  box-shadow: 0 4px 0 #7a4a22, inset 0 2px 0 rgba(255, 255, 255, 0.5);
+}
+
+.wood-button:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #7a4a22, inset 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+
+.wood-button-red {
+  background: linear-gradient(#d24a3e, #a12a22);
+  border: 2px solid #6e1a14;
+  box-shadow: 0 4px 0 #6e1a14, inset 0 2px 0 rgba(255, 255, 255, 0.3);
+  color: #ffffff;
+}
+
+.wood-button-red:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: 0 2px 0 #6e1a14;
+}
+
+/* Board frame & Cell styling */
+.board-frame {
+  background: linear-gradient(135deg, #7d4e2a, #5a3519);
+  box-shadow: inset 0 2px 0 rgba(255, 210, 150, 0.3), inset 0 -3px 0 rgba(0, 0, 0, 0.4), 0 8px 20px rgba(60, 30, 10, 0.45);
+}
+
+.cell-chip {
+  background: linear-gradient(#f8dfb0, #e2b273);
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.7), inset 0 -3px 0 rgba(130, 80, 30, 0.5), 0 3px 5px rgba(0, 0, 0, 0.4);
+  animation: pop 0.28s ease-out;
+}
+
+/* Animations */
+@keyframes pop {
+  0% { transform: scale(0.3); opacity: 0; }
+  70% { transform: scale(1.12); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-5px); }
+  40%, 80% { transform: translateX(5px); }
+}
+
+.animate-shake {
+  animation: shake 0.4s ease-in-out;
+}
+
+@keyframes thread-h {
+  0% { transform: scaleX(0); }
+  40% { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
+}
+
+@keyframes thread-v {
+  0% { transform: scaleY(0); }
+  40% { transform: scaleY(1); opacity: 1; }
+  100% { transform: scaleY(1); opacity: 0; }
+}
+
+@keyframes pin-drop {
+  0% { transform: scale(0); }
+  20% { transform: scale(1.25); }
+  35%, 75% { transform: scale(1); opacity: 1; }
+  100% { opacity: 0; }
+}
+
+.thread-h {
+  animation: thread-h 1.15s forwards;
+}
+
+.thread-v {
+  animation: thread-v 1.15s forwards;
+}
+
+.pin-drop {
+  animation: pin-drop 1.15s forwards;
+}
+
+/* Cell effects */
+.cell-x-mark::after {
+  content: "✕";
+  font-weight: 800;
+  color: rgba(50, 25, 8, 0.65);
+  line-height: 1;
+}
+
+/* Mobile responsive media queries */
+@media (max-width: 480px) {
+  .app-container {
+    padding-left: 8px;
+    padding-right: 8px;
+    padding-top: 8px;
+    padding-bottom: 16px;
+  }
+  .case-title {
+    font-size: 1.15rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .app-container {
+    padding-left: 4px;
+    padding-right: 4px;
+    gap: 6px;
+  }
+  .top-btn {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .tool-btn .tool-icon {
+    width: 48px !important;
+    height: 48px !important;
+  }
+}
+
+/* Height-based media query for short screens (e.g. mobile landscape or small phones) */
+@media (max-height: 720px) {
+  .app-header {
+    margin-bottom: 2px !important;
+  }
+  .status-banner {
+    min-height: 34px !important;
+    padding-top: 4px !important;
+    padding-bottom: 4px !important;
+    font-size: 0.8rem !important;
+  }
+  .tool-btn .tool-icon {
+    width: 46px !important;
+    height: 46px !important;
+  }
+  .tool-btn .tool-label {
+    font-size: 0.7rem !important;
+  }
+}
+
+/* Force mobile portrait orientation lock */
+@media (max-width: 950px) and (max-height: 580px) and (orientation: landscape) {
+  .mobile-portrait-lock {
+    display: flex !important;
+  }
+}
+
+/* Mobile portrait container standard lock */
+@media (max-width: 767px) {
+  .app-container {
+    width: 100% !important;
+    max-width: 430px !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+  }
+}
+
+/* Tablet mode: only for genuine tablet dimensions (both width >= 768px AND height >= 600px) */
+@media (min-width: 768px) and (min-height: 600px) {
+  .tablet-layout {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) auto !important;
+    grid-template-areas:
+      "top top"
+      "prog prog"
+      "board nav"
+      "status nav" !important;
+    max-width: 680px !important;
+    align-items: stretch !important;
+    gap: 14px 16px !important;
+  }
+
+  .tablet-top {
+    grid-area: top;
+    width: 100% !important;
+  }
+
+  .tablet-prog {
+    grid-area: prog;
+    width: 100% !important;
+  }
+
+  .tablet-board {
+    grid-area: board;
+    width: 100% !important;
+  }
+
+  .tablet-status {
+    grid-area: status;
+    width: 100% !important;
+  }
+
+  .tablet-nav {
+    grid-area: nav;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    width: auto !important;
+    min-width: 86px !important;
+    height: 100% !important;
+    max-width: none !important;
+    padding: 16px 10px !important;
+    gap: 16px !important;
+  }
+
+  .tablet-nav .tool-btn {
+    width: 100% !important;
+  }
+}

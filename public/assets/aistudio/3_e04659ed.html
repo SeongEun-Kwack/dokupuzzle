@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Sherlockdoku</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Gowun+Dodum&family=Nanum+Myeongjo:wght@700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --f-title:"Nanum Myeongjo",serif;   /* 폰트 1: 제목·숫자 */
+  --f-ui:"Gowun Dodum",sans-serif;    /* 폰트 2: UI·본문 */
+  --dk:#4a2a12; --wood-d:#6e4323; --cream:#fff1d6; --red:#b8322a;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%}
+body{
+  font-family:var(--f-ui);color:var(--dk);display:flex;justify-content:center;
+  padding:14px 10px 24px;min-height:100vh;user-select:none;-webkit-user-select:none;
+  background-color:#d9a467;
+  background-image:
+    repeating-linear-gradient(90deg,transparent 0 118px,rgba(90,50,20,.28) 118px 120px),
+    repeating-linear-gradient(90deg,rgba(120,70,30,.07) 0 2px,transparent 2px 9px),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.06) 0 1px,transparent 1px 23px),
+    linear-gradient(90deg,#d49d5e,#e3b67b 25%,#d29b5c 50%,#e1b276 75%,#d49d5e);
+  background-attachment:fixed;
+}
+.app{width:min(460px,100%);display:flex;flex-direction:column;gap:10px}
+.brand{text-align:center;font-family:var(--f-title);font-weight:800;font-size:14px;letter-spacing:5px;color:var(--wood-d);opacity:.8}
+
+/* 상단 바 */
+.top{display:grid;grid-template-columns:52px 1fr 52px;gap:10px;align-items:center}
+.sq{width:52px;height:52px;border-radius:12px;display:grid;place-items:center;cursor:pointer;color:var(--dk);padding:0;
+  background:linear-gradient(#f3cf94,#d9a25e);border:2px solid #8a5a2b;box-shadow:0 4px 0 #7a4a22,inset 0 2px 0 rgba(255,255,255,.5)}
+.sq:active{transform:translateY(2px);box-shadow:0 2px 0 #7a4a22}
+.sq svg{width:28px;height:28px}
+.panel{background:linear-gradient(#8f5d34,#6e4323);border-radius:12px;color:var(--cream);
+  box-shadow:inset 0 2px 0 rgba(255,220,170,.25),inset 0 -3px 0 rgba(0,0,0,.25),0 3px 0 #4a2c14}
+.casep{display:flex;align-items:center;height:52px;padding:0 2px}
+.casep .mid{flex:1;text-align:center;min-width:0}
+.caseno{font-family:var(--f-title);font-weight:800;font-size:21px;letter-spacing:2px;line-height:1.15}
+.casename{font-size:11.5px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.arrow{background:none;border:0;color:var(--cream);font-size:28px;width:34px;height:46px;cursor:pointer;font-family:var(--f-title)}
+.arrow:disabled{opacity:.25;cursor:default}
+.timer{display:flex;flex-direction:column;align-items:center;gap:1px;font-family:var(--f-title);font-weight:800;font-size:15px;color:var(--wood-d)}
+.timer svg{width:20px;height:20px}
+
+/* 진행 바 */
+.prog{display:flex;align-items:center;gap:10px}
+.bar{position:relative;flex:1;height:18px;border-radius:9px;background:#5a3418;box-shadow:inset 0 2px 3px rgba(0,0,0,.45);overflow:hidden}
+.fill{height:100%;width:0;background:linear-gradient(#ffd773,#e3a530);border-radius:9px;transition:width .35s}
+.bar span{position:absolute;inset:0;display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;text-shadow:0 1px 1px rgba(0,0,0,.6)}
+.lives{display:flex;gap:2px}
+.lives svg{width:22px;height:22px;display:block}
+.lives .lost{opacity:.25;filter:grayscale(1)}
+
+/* 보드 */
+.frame{padding:8px;border-radius:14px;background:linear-gradient(135deg,#7d4e2a,#5a3519);
+  box-shadow:inset 0 2px 0 rgba(255,210,150,.3),inset 0 -3px 0 rgba(0,0,0,.3),0 6px 14px rgba(60,30,10,.4)}
+.boardbox{position:relative;width:100%;aspect-ratio:1;border-radius:6px;overflow:hidden}
+.board{display:grid;width:100%;height:100%;background:#2a170a;touch-action:none}
+.loading{position:absolute;inset:0;display:grid;place-items:center;font-size:18px;color:var(--cream);background:rgba(42,23,10,.85)}
+.cell{position:relative;display:flex;align-items:center;justify-content:center;cursor:pointer}
+.cell.x::after{content:"✕";font-weight:700;color:rgba(50,25,8,.55);font-size:clamp(12px,4.4vw,22px)}
+.chip{position:absolute;inset:7%;border-radius:6px;display:grid;place-items:center;
+  background:linear-gradient(#f8dfb0,#e2b273);
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.65),inset 0 -3px 0 rgba(130,80,30,.45),0 2px 3px rgba(0,0,0,.45);animation:pop .28s}
+.chip svg{width:82%;height:82%}
+.cell.bad{animation:shake .4s;box-shadow:inset 0 0 0 999px rgba(184,50,42,.7)}
+.cell.zone{box-shadow:inset 0 0 0 999px rgba(40,20,5,.3)}
+.cell.hint{box-shadow:inset 0 0 0 4px #ffd34d,inset 0 0 14px rgba(255,211,77,.9)}
+.cell.hl{box-shadow:inset 0 0 0 999px rgba(184,50,42,.28)}
+.thread{position:absolute;background:var(--red);pointer-events:none;box-shadow:0 1px 2px rgba(0,0,0,.45);z-index:2}
+.thread.h{left:0;right:0;height:2px;margin-top:-1px;transform-origin:var(--ox) 50%;animation:th 1.1s forwards}
+.thread.v{top:0;bottom:0;width:2px;margin-left:-1px;transform-origin:50% var(--oy);animation:tv 1.1s forwards}
+.pin{position:absolute;width:13px;height:13px;margin:-6.5px 0 0 -6.5px;border-radius:50%;z-index:3;pointer-events:none;
+  background:radial-gradient(circle at 35% 35%,#fff0c0,#c9a24a 50%,#6b4a12);box-shadow:0 2px 3px rgba(0,0,0,.5);animation:pinf 1.1s forwards}
+@keyframes th{0%{transform:scaleX(0)}40%{transform:scaleX(1);opacity:1}100%{transform:scaleX(1);opacity:0}}
+@keyframes tv{0%{transform:scaleY(0)}40%{transform:scaleY(1);opacity:1}100%{transform:scaleY(1);opacity:0}}
+@keyframes pinf{0%{transform:scale(0)}20%{transform:scale(1.2)}35%,70%{transform:scale(1);opacity:1}100%{opacity:0}}
+@keyframes pop{0%{transform:scale(.3)}70%{transform:scale(1.1)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-4px)}40%,80%{transform:translateX(4px)}}
+
+/* 메시지 & 도구함 */
+.msg{min-height:40px;padding:9px 12px;border-radius:10px;text-align:center;font-size:14px;line-height:1.45;
+  background:rgba(255,241,214,.55);box-shadow:inset 0 1px 2px rgba(90,50,20,.25)}
+.tray{display:flex;justify-content:space-around;padding:14px 6px 10px;border-radius:14px;background:rgba(110,67,35,.22);box-shadow:inset 0 2px 4px rgba(60,30,10,.25)}
+.tool{display:flex;flex-direction:column;align-items:center;gap:6px;background:none;border:0;padding:0;font-family:var(--f-ui);color:var(--dk);cursor:pointer}
+.tool .ic{position:relative;width:58px;height:58px;border-radius:12px;display:grid;place-items:center;
+  background:linear-gradient(#f3cf94,#d9a25e);border:2px solid #8a5a2b;box-shadow:0 4px 0 #7a4a22,inset 0 2px 0 rgba(255,255,255,.5)}
+.tool .ic svg{width:30px;height:30px}
+.tool.on .ic{background:linear-gradient(#fff0cf,#f0c27c);box-shadow:0 2px 0 #7a4a22,0 0 0 3px var(--red);transform:translateY(2px)}
+.tool:disabled{opacity:.4;cursor:default}
+.tool .lb{font-size:12.5px;font-weight:700}
+.badge{position:absolute;right:-9px;bottom:-9px;min-width:22px;height:22px;padding:0 4px;border-radius:6px;background:#d2552f;color:#fff;
+  font-size:13px;font-weight:700;display:grid;place-items:center;border:2px solid #fff3dc}
+
+/* 모달 공통 */
+.ov{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(30,15,5,.65)}
+.ov.hidden{display:none}
+.modal{position:relative;width:min(380px,100%);border-radius:18px;padding:0 18px 18px;text-align:center;
+  background:linear-gradient(#fbe9c8,#f1d4a2);border:5px solid #7a4a24;box-shadow:0 6px 0 #4a2c14,0 20px 50px rgba(0,0,0,.5);animation:pop .3s}
+.modal h2{margin:0 -18px 14px;padding:13px 50px;border-radius:12px 12px 0 0;background:linear-gradient(#8f5d34,#6e4323);
+  color:var(--cream);font-family:var(--f-title);font-weight:800;font-size:19px;letter-spacing:2px}
+.btn{font-family:var(--f-ui);font-weight:700;font-size:15px;padding:11px 14px;border-radius:10px;cursor:pointer;color:var(--dk);
+  background:linear-gradient(#f3cf94,#d9a25e);border:2px solid #8a5a2b;box-shadow:0 3px 0 #7a4a22}
+.btn.primary{color:#fff;background:linear-gradient(#d24a3e,#a12a22);border-color:#6e1a14;box-shadow:0 3px 0 #6e1a14}
+.btn:active{transform:translateY(2px)}
+.btns{display:flex;gap:8px;margin-top:16px}.btns .btn{flex:1}
+.xclose{position:absolute;top:9px;right:10px;background:none;border:0;color:var(--cream);font-size:22px;cursor:pointer;font-family:var(--f-ui)}
+
+/* 설정 */
+.srow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px dashed rgba(110,67,35,.35);text-align:left;font-weight:700;font-size:15px}
+.srow small{display:block;font-weight:400;font-size:11.5px;opacity:.7}
+.seg{display:flex;border:2px solid #8a5a2b;border-radius:10px;overflow:hidden;flex-shrink:0}
+.seg button{border:0;padding:7px 12px;font-family:var(--f-ui);font-weight:700;font-size:13px;background:#f6dcae;color:var(--dk);cursor:pointer}
+.seg button.on{background:#6e4323;color:var(--cream)}
+select{font-family:var(--f-ui);font-weight:700;font-size:13px;padding:7px;border-radius:10px;border:2px solid #8a5a2b;background:#f6dcae;color:var(--dk);max-width:58%}
+.sw{position:relative;width:52px;height:30px;flex:0 0 52px}
+.sw input{position:absolute;opacity:0;width:0;height:0}
+.sw span{position:absolute;inset:0;border-radius:15px;background:#b89a74;transition:.2s;cursor:pointer;box-shadow:inset 0 2px 3px rgba(0,0,0,.3)}
+.sw span::after{content:"";position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#fff6e4;transition:.2s;box-shadow:0 2px 2px rgba(0,0,0,.3)}
+.sw input:checked+span{background:#5f8f3e}
+.sw input:checked+span::after{transform:translateX(22px)}
+.stack{display:flex;flex-direction:column;gap:8px;margin-top:16px}
+
+/* 튜토리얼 */
+.mini{display:grid;grid-template-columns:repeat(4,1fr);width:168px;aspect-ratio:1;margin:4px auto 14px;border:5px solid #6e4323;border-radius:8px;background:#2a170a;overflow:hidden}
+.mini .cell{cursor:default}
+.mini .cell.x::after{font-size:16px}
+.tut h3{font-family:var(--f-title);font-weight:800;margin:0 0 6px;font-size:18px}
+.tut p{margin:0;font-size:14.5px;line-height:1.65;min-height:72px}
+.dots{display:flex;justify-content:center;gap:6px;margin-top:14px}
+.dots i{width:8px;height:8px;border-radius:4px;background:#c9a275;transition:.2s}
+.dots i.on{background:#6e4323;width:22px}
+.skip{position:absolute;top:13px;right:12px;background:none;border:0;color:var(--cream);font-family:var(--f-ui);font-size:13px;cursor:pointer;opacity:.85}
+
+/* 결과 */
+.stars{font-size:32px;color:#e3a530;letter-spacing:6px;text-shadow:0 2px 0 #7a4a22;line-height:1}
+.rname{font-family:var(--f-title);font-weight:800;font-size:16px;margin:8px 0 4px}
+.stats{display:flex;justify-content:center;gap:22px;font-size:12.5px;margin:8px 0 12px}
+.stats b{display:block;font-family:var(--f-title);font-size:18px}
+.note{font-size:13.5px;line-height:1.6;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.45);text-align:left}
+.note .sig{text-align:right;opacity:.7;margin-top:4px;font-size:12px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="brand" data-i18n="title"></div>
+
+  <header class="top">
+    <button class="sq" id="btnSet" aria-label="settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="4" stroke-dasharray="3.34 3.34"/><circle cx="12" cy="12" r="6.6" fill="currentColor"/><circle cx="12" cy="12" r="2.6" fill="#e6b06e"/></svg>
+    </button>
+    <div class="panel casep">
+      <button class="arrow" id="prevBtn" aria-label="prev">‹</button>
+      <div class="mid"><div class="caseno" id="caseNo">—</div><div class="casename" id="caseName">—</div></div>
+      <button class="arrow" id="nextBtn" aria-label="next">›</button>
+    </div>
+    <div class="timer">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M10 2h4"/></svg>
+      <span id="timer">00:00</span>
+    </div>
+  </header>
+
+  <div class="prog">
+    <div class="bar"><div class="fill" id="fill"></div><span id="count">0/0</span></div>
+    <div class="lives" id="lives"></div>
+  </div>
+
+  <div class="frame"><div class="boardbox" id="wrap"><div class="board" id="board"></div></div></div>
+
+  <div class="msg" id="status"></div>
+
+  <nav class="tray">
+    <button class="tool on" id="toolX">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+      <span class="lb" data-i18n="tMark"></span>
+    </button>
+    <button class="tool" id="toolA">
+      <span class="ic" id="icAgent"></span>
+      <span class="lb" data-i18n="tPlace"></span>
+    </button>
+    <button class="tool" id="undoBtn">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v6h6"/><path d="M4.6 10A8 8 0 1 1 6 17"/></svg></span>
+      <span class="lb" data-i18n="tUndo"></span>
+    </button>
+    <button class="tool" id="hintBtn">
+      <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg><span class="badge" id="hintBadge">3</span></span>
+      <span class="lb" data-i18n="tHint"></span>
+    </button>
+  </nav>
+</div>
+
+<!-- 튜토리얼 -->
+<div class="ov hidden" id="mTut">
+  <div class="modal tut">
+    <h2 data-i18n="title"></h2>
+    <button class="skip" id="tutSkip" data-i18n="skip"></button>
+    <div id="tutMini"></div>
+    <h3 id="tutH"></h3>
+    <p id="tutP"></p>
+    <div class="dots" id="tutDots"></div>
+    <div class="btns">
+      <button class="btn" id="tutPrev" data-i18n="prev"></button>
+      <button class="btn primary" id="tutNext"></button>
+    </div>
+  </div>
+</div>
+
+<!-- 설정 -->
+<div class="ov hidden" id="mSet">
+  <div class="modal">
+    <h2 data-i18n="settings"></h2>
+    <button class="xclose" id="setClose" aria-label="close">✕</button>
+    <div class="srow"><span data-i18n="language"></span>
+      <div class="seg" id="langSeg"><button data-lang="ko">한국어</button><button data-lang="en">English</button></div>
+    </div>
+    <div class="srow"><span data-i18n="size"></span><select id="sizeSel"></select></div>
+    <div class="srow"><span><span data-i18n="autoX"></span><small data-i18n="autoXDesc"></small></span>
+      <label class="sw"><input type="checkbox" id="autoChk"><span></span></label>
+    </div>
+    <div class="stack">
+      <button class="btn" id="howBtn" data-i18n="howto"></button>
+      <button class="btn" id="restartBtn" data-i18n="restart"></button>
+    </div>
+  </div>
+</div>
+
+<!-- 결과 -->
+<div class="ov hidden" id="mRes"><div class="modal" id="resBox"></div></div>
+
+<script>
+// ===================== 다국어 =====================
+const L={
+ko:{
+  title:'  ', caseLbl:'CASE',
+  tMark:'소거', tPlace:'배치', tUndo:'되돌리기', tHint:'힌트',
+  loading:'단서를 모으는 중...',
+  start:'{n}개 구역에 탐정을 한 명씩 배치하세요. (필요한 추리: {tagName})',
+  tags:['','기초 관찰','연역 추리','소거법'],
+  good:['기초적인 일이지, 왓슨.','정확한 추리야.','단서가 맞아떨어진다.','관찰의 승리.','파이프 세 대짜리 문제도 아니군.'],
+  wrong:'잘못 짚었어요. 레스트레이드 경감이 비웃는다. (명성 {c}/{m})',
+  hintUsed:'힌트로 탐정 1명 배치. (남은 힌트 {h})',
+  noHint:'이 사건의 힌트를 모두 썼어요.',
+  restarted:'수사를 처음부터 다시 시작합니다.',
+  retryMsg:'재수사 시작. 이번엔 증거만 믿는다.',
+  settings:'설정', language:'언어', size:'보드 크기', autoX:'자동 소거',
+  autoXDesc:'탐정 배치 시 불가능한 칸을 자동으로 ✕',
+  howto:'게임 방법 보기', restart:'이 사건 다시 시작', confirmRestart:'이 사건을 처음부터 다시 할까요?',
+  sizes:{5:'5×5 · 견습 탐정',6:'6×6 · 스코틀랜드 야드',7:'7×7 · 자문 탐정',8:'8×8 · 베이커가 221B'},
+  skip:'건너뛰기', prev:'이전', next:'다음', go:'수사 시작',
+  tut:[
+    {h:'목표',p:'색깔 <b>구역마다 탐정을 정확히 한 명씩</b> 배치하세요.'},
+    {h:'같은 줄 금지',p:'같은 <b>가로줄·세로줄</b>에 탐정이 두 명 있으면 안 돼요.'},
+    {h:'붙어 있으면 안 돼요',p:'탐정끼리는 <b>대각선을 포함한 8방향</b> 어디로도 닿으면 안 돼요.'},
+    {h:'조작법',p:'<b>탭</b>: ✕ 표시 (드래그로 여러 칸)<br><b>더블탭</b> 또는 <b>[배치]</b> 도구: 탐정 배치<br>틀리면 명성 -1, 3번 틀리면 실패예요.'}
+  ],
+  solved:'사건 해결!', time:'시간', fame:'명성', hints:'힌트',
+  nextCase:'다음 사건', close:'닫기',
+  failTitle:'사건이 미궁에 빠졌다', failSub:'명성을 모두 잃었어요.',
+  failNote:'런던의 안개 속 어딘가에서 누군가 웃고 있다.', failSig:'— M.', retry:'다시 수사',
+  sig:'— J. H. 왓슨의 수첩에서',
+  cases:['주홍색 연구','네 사람의 서명','바스커빌가의 개','공포의 계곡','얼룩 끈','보헤미아 왕국의 스캔들','빨간 머리 연맹','춤추는 사람 인형','푸른 카벙클','실버 블레이즈','마지막 사건','빈 집의 모험','여섯 개의 나폴레옹','노우드의 건축업자','해군 조약문','너도밤나무 집'],
+  briefs:[
+    '1891년 가을, 베이커가 221B. 홈즈가 런던 지도 위에 핀을 꽂기 시작했다.',
+    '한 거리에 탐정이 둘 이상 서면 놈들의 눈에 띈다. 홈즈의 첫 번째 원칙이다.',
+    '템스강에서 건져 올린 쪽지: "모든 구역에는 단 하나의 문이 있다."',
+    '"그림자처럼 붙어 다니는 두 사람은 결국 정체를 들키지." 홈즈가 말했다.',
+    '화이트채플의 성냥팔이 소년이 낯선 교수를 보았다고 한다.',
+    '스코틀랜드 야드의 레스트레이드 경감이 처음으로 먼저 도움을 청해 왔다.',
+    '쪽지 해독 완료: "문은 시계탑의 그림자 아래에 있다."',
+    '시계탑 지하에서 수학 공식이 빼곡한 노트가 발견됐다.',
+    '공식의 필체는 『소행성의 역학』의 저자와 정확히 일치한다.',
+    '그 이름은 모리아티. 홈즈는 말없이 파이프에 불을 붙였다.',
+    '모리아티의 편지: "체스판은 처음부터 내 것이었소, 홈즈 씨."',
+    '"불가능한 것을 제거하고 남은 것이 진실이네, 왓슨." 우리는 라이헨바흐로 향한다.'
+  ]
+},
+en:{
+  title:' ', caseLbl:'CASE',
+  tMark:'Mark', tPlace:'Place', tUndo:'Undo', tHint:'Hint',
+  loading:'Gathering clues...',
+  start:'Place one detective in each of the {n} districts. (Requires: {tagName})',
+  tags:['','Observation','Deduction','Elimination'],
+  good:['Elementary, my dear Watson.','A precise deduction.','The clues fit together.','A triumph of observation.','Hardly a three-pipe problem.'],
+  wrong:'Wrong guess. Lestrade smirks. (Fame {c}/{m})',
+  hintUsed:'Hint used: 1 detective placed. ({h} left)',
+  noHint:'No hints left for this case.',
+  restarted:'Investigation restarted.',
+  retryMsg:'Reopening the case. Trust only the evidence.',
+  settings:'Settings', language:'Language', size:'Board size', autoX:'Auto-mark',
+  autoXDesc:'Auto ✕ impossible cells after placing',
+  howto:'How to play', restart:'Restart this case', confirmRestart:'Restart this case from scratch?',
+  sizes:{5:'5×5 · Apprentice',6:'6×6 · Scotland Yard',7:'7×7 · Consulting Detective',8:'8×8 · 221B Baker St.'},
+  skip:'Skip', prev:'Back', next:'Next', go:'Start',
+  tut:[
+    {h:'The Goal',p:'Place <b>exactly one detective in every colored district</b>.'},
+    {h:'One per line',p:'No two detectives may share a <b>row or column</b>.'},
+    {h:'No touching',p:'Detectives can\'t touch each other in <b>any of 8 directions</b>, diagonals included.'},
+    {h:'Controls',p:'<b>Tap</b>: mark ✕ (drag to mark many)<br><b>Double-tap</b> or the <b>Place</b> tool: place a detective<br>A wrong guess costs 1 fame. Lose all 3 and you fail.'}
+  ],
+  solved:'Case Solved!', time:'Time', fame:'Fame', hints:'Hints',
+  nextCase:'Next Case', close:'Close',
+  failTitle:'The Case Went Cold', failSub:'You ran out of fame.',
+  failNote:'Somewhere in the London fog, someone is laughing.', failSig:'— M.', retry:'Reopen Case',
+  sig:'— from the notebook of Dr. J. H. Watson',
+  cases:['A Study in Scarlet','The Sign of Four','The Hound of the Baskervilles','The Valley of Fear','The Speckled Band','A Scandal in Bohemia','The Red-Headed League','The Dancing Men','The Blue Carbuncle','Silver Blaze','The Final Problem','The Empty House','The Six Napoleons','The Norwood Builder','The Naval Treaty','The Copper Beeches'],
+  briefs:[
+    'Autumn 1891, 221B Baker Street. Holmes began pinning a map of London.',
+    '"Two detectives on one street will be spotted." Holmes\'s first rule.',
+    'A note pulled from the Thames: "Every district has but one door."',
+    '"Two who shadow each other too closely are soon unmasked," said Holmes.',
+    'A match-boy in Whitechapel claims he saw a strange professor.',
+    'For the first time, Inspector Lestrade came to us for help.',
+    'The note decoded: "The door lies beneath the shadow of the clock tower."',
+    'Beneath the clock tower: a notebook crammed with equations.',
+    'The handwriting matches the author of "The Dynamics of an Asteroid."',
+    'The name is Moriarty. Holmes lit his pipe in silence.',
+    'A letter from Moriarty: "The board was mine from the start, Mr. Holmes."',
+    '"Eliminate the impossible, Watson, and what remains is the truth." To Reichenbach.'
+  ]
+}};
+let lang=localStorage.getItem('sd-lang')||((navigator.language||'').startsWith('ko')?'ko':'en');
+function t(k,v={}){
+  let s=L[lang][k]??L.ko[k]??k;
+  return typeof s==='string'?s.replace(/\{(\w+)\}/g,(_,x)=>v[x]??''):s;
+}
+
+// ===================== 아트 =====================
+function detectiveSVG(fill='#2a170a'){
+  return `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><g fill="${fill}">
+  <path d="M8 64 C9 54 15 47 25 45 L41 45 C51 47 57 54 58 64 Z"/><path d="M27 38 L39 38 L40 47 L26 47 Z"/>
+  <path d="M23 29 C23 20 30 17 36 18 C42 19 45 24 45 28 L48 32 L45 33.5 L45.5 36 L44 37 C44 40 41 42 37 42 L31 42 C26 41 23 36 23 29 Z"/>
+  <path d="M20 25 C19 14 27 9 34 9 C42 9 47 14 47 23 Z"/><path d="M44 21 L56 24.5 L45 26 Z"/><path d="M23 21 L11 25 L23 27 Z"/>
+  <path d="M43 36.5 L52 38.5 L52 40.5 L43 38.5 Z"/><path d="M50 33 h6 v6.5 a3 3 0 0 1 -6 0 Z"/></g></svg>`;
+}
+const MAG='<svg viewBox="0 0 24 24"><circle cx="10" cy="10" r="6.5" fill="rgba(255,255,255,.5)" stroke="#4a2a12" stroke-width="2.4"/><path d="M15 15 L21 21" stroke="#b8322a" stroke-width="3.4" stroke-linecap="round"/></svg>';
+const PALETTE=['#e8c48e','#c9784f','#9fae78','#8fa8bb','#d29aa0','#e0b04a','#a796bf','#6fa59f'];
+
+function paintCell(d,R,r,c,n,thick){
+  const g=R[r][c],thin='1px solid rgba(42,23,10,.2)';
+  d.style.background=`repeating-linear-gradient(100deg,rgba(0,0,0,.035) 0 2px,transparent 2px 7px),linear-gradient(160deg,rgba(255,255,255,.25),rgba(0,0,0,.12)),${PALETTE[g]}`;
+  d.style.borderTop=(r>0&&R[r-1][c]!==g)?thick:thin;
+  d.style.borderBottom=(r<n-1&&R[r+1][c]!==g)?thick:thin;
+  d.style.borderLeft=(c>0&&R[r][c-1]!==g)?thick:thin;
+  d.style.borderRight=(c<n-1&&R[r][c+1]!==g)?thick:thin;
+}
+
+// ===================== 생성기 =====================
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function shuffle(a,rng){for(let i=a.length-1;i>0;i--){const j=Math.floor(rng()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function randomPlacement(n,rng){
+  const perm=[],used=Array(n).fill(false);
+  const bt=r=>{if(r===n)return true;
+    for(const c of shuffle([...Array(n).keys()],rng)){
+      if(used[c]||(r>0&&Math.abs(c-perm[r-1])<=1))continue;
+      used[c]=true;perm[r]=c;if(bt(r+1))return true;used[c]=false;}
+    return false;};
+  bt(0);return perm;
+}
+function growRegions(n,perm,rng){
+  const reg=Array.from({length:n},()=>Array(n).fill(-1)),frontier=[];
+  perm.forEach((c,r)=>{reg[r][c]=r;frontier.push([r,c]);});
+  let filled=n;
+  while(filled<n*n){
+    const i=Math.floor(rng()*frontier.length),[r,c]=frontier[i];
+    const nb=[[1,0],[-1,0],[0,1],[0,-1]].map(([dr,dc])=>[r+dr,c+dc]).filter(([a,b])=>a>=0&&b>=0&&a<n&&b<n&&reg[a][b]===-1);
+    if(!nb.length){frontier.splice(i,1);continue;}
+    const [a,b]=nb[Math.floor(rng()*nb.length)];reg[a][b]=reg[r][c];frontier.push([a,b]);filled++;
+  }
+  return reg;
+}
+function countSolutions(reg,n,limit=2){
+  let count=0;const colUsed=Array(n).fill(false),regUsed=Array(n).fill(false);
+  const bt=(r,prev)=>{if(r===n){count++;return;}
+    for(let c=0;c<n&&count<limit;c++){const g=reg[r][c];
+      if(colUsed[c]||regUsed[g]||(prev>=0&&Math.abs(c-prev)<=1))continue;
+      colUsed[c]=regUsed[g]=true;bt(r+1,c);colUsed[c]=regUsed[g]=false;}};
+  bt(0,-1);return count;
+}
+function logicSolve(reg,n){
+  const N=n*n,cand=new Uint8Array(N).fill(1),placed=new Uint8Array(N),units=[];
+  for(let r=0;r<n;r++){const u=[];for(let c=0;c<n;c++)u.push(r*n+c);units.push(u);}
+  for(let c=0;c<n;c++){const u=[];for(let r=0;r<n;r++)u.push(r*n+c);units.push(u);}
+  for(let g=0;g<n;g++)units.push([]);
+  for(let i=0;i<N;i++)units[2*n+reg[(i/n)|0][i%n]].push(i);
+  const conflicts=(i,j)=>{const ri=(i/n)|0,ci=i%n,rj=(j/n)|0,cj=j%n;
+    return ri===rj||ci===cj||reg[ri][ci]===reg[rj][cj]||(Math.abs(ri-rj)<=1&&Math.abs(ci-cj)<=1);};
+  const place=(cd,pl,i)=>{pl[i]=1;for(let j=0;j<N;j++)if(j!==i&&cd[j]&&conflicts(i,j))cd[j]=0;};
+  const dead=(cd,pl)=>units.some(u=>!u.some(i=>pl[i])&&!u.some(i=>cd[i]));
+  let level=0,count=0;
+  while(count<n){
+    let progress=false;
+    for(const u of units){if(u.some(i=>placed[i]))continue;const cs=u.filter(i=>cand[i]);
+      if(!cs.length)return{solved:false,level};
+      if(cs.length===1){place(cand,placed,cs[0]);count++;progress=true;level=Math.max(level,1);}}
+    if(progress)continue;
+    for(const a of units){if(a.some(i=>placed[i]))continue;const cs=a.filter(i=>cand[i]);if(!cs.length)continue;
+      for(const b of units){if(b===a||!cs.every(i=>b.includes(i)))continue;
+        for(const j of b)if(cand[j]&&!placed[j]&&!cs.includes(j)){cand[j]=0;progress=true;}}}
+    if(progress){level=Math.max(level,2);continue;}
+    for(let i=0;i<N;i++){if(!cand[i]||placed[i])continue;const cd=cand.slice(),pl=placed.slice();
+      place(cd,pl,i);if(dead(cd,pl)){cand[i]=0;progress=true;}}
+    if(progress){level=Math.max(level,3);continue;}
+    return{solved:false,level};
+  }
+  return{solved:true,level};
+}
+function generate(n,seed){
+  const rng=mulberry32(seed);
+  while(true){const perm=randomPlacement(n,rng),reg=growRegions(n,perm,rng);
+    if(countSolutions(reg,n)!==1)continue;const ls=logicSolve(reg,n);
+    if(ls.solved)return{regions:reg,solution:perm,level:ls.level};}
+}
+
+// ===================== 상태 =====================
+const $=id=>document.getElementById(id);
+const boardEl=$('board'),wrap=$('wrap');
+const MAX_COVER=3, HINT_MAX=3;
+let n=+(localStorage.getItem('sd-size')||6);
+let autoX=localStorage.getItem('sd-autox')!=='0';
+let level=1,reg,sol,solSet,marks,cover,undoStack,hintsLeft,elapsed=0,over=true,tool='x',puzzleLevel=0,lastStatus={key:'',vars:{}};
+const caseIdx=()=>(level*7+n)%16;
+const loadProgress=()=>+(localStorage.getItem('sd-prog-'+n)||1);
+const saveProgress=lv=>{if(lv>loadProgress())localStorage.setItem('sd-prog-'+n,lv);};
+$('icAgent').innerHTML=detectiveSVG('#4a2a12');
+
+function status(key,vars={}){lastStatus={key,vars};renderStatus();}
+function renderStatus(){
+  const {key,vars}=lastStatus;if(!key){$('status').textContent='';return;}
+  const v={...vars};if('tag' in v)v.tagName=t('tags')[v.tag];
+  $('status').textContent=key==='good'?t('good')[v.k]:t(key,v);
+}
+function renderCaseTitle(){
+  $('caseNo').textContent=`${t('caseLbl')} ${String(level).padStart(3,'0')}`;
+  $('caseName').textContent=t('cases')[caseIdx()];
+}
+
+function loadLevel(){
+  over=true;boardEl.innerHTML='';
+  const ld=document.createElement('div');ld.className='loading';ld.textContent=t('loading');wrap.appendChild(ld);
+  renderCaseTitle();
+  setTimeout(()=>{
+    const p=generate(n,n*100003+level*7919);ld.remove();
+    reg=p.regions;sol=p.solution;puzzleLevel=p.level;
+    solSet=new Set(sol.map((c,r)=>r*n+c));
+    renderBoard();resetPlay();
+    status('start',{n,tag:puzzleLevel});
+  },30);
+}
+function resetPlay(){marks=new Uint8Array(n*n);cover=MAX_COVER;undoStack=[];hintsLeft=HINT_MAX;over=false;elapsed=0;update();}
+function renderBoard(){
+  boardEl.style.gridTemplateColumns=`repeat(${n},1fr)`;boardEl.style.gridTemplateRows=`repeat(${n},1fr)`;
+  for(let r=0;r<n;r++)for(let c=0;c<n;c++){
+    const d=document.createElement('div');d.className='cell';d.dataset.i=r*n+c;
+    paintCell(d,reg,r,c,n,'2.5px solid #2a170a');boardEl.appendChild(d);
+  }
+}
+function update(){
+  const cells=boardEl.children;let agents=0;
+  for(let i=0;i<cells.length;i++){
+    const el=cells[i],m=marks[i];el.classList.toggle('x',m===1);
+    if(m===2){agents++;if(!el.classList.contains('agent')){el.classList.add('agent');el.innerHTML=`<div class="chip">${detectiveSVG()}</div>`;}}
+    else if(el.classList.contains('agent')){el.classList.remove('agent');el.innerHTML='';}
+  }
+  $('count').textContent=`${agents}/${n}`;
+  $('fill').style.width=(agents/n*100)+'%';
+  $('lives').innerHTML=Array.from({length:MAX_COVER},(_,k)=>`<span class="${k<cover?'':'lost'}">${MAG}</span>`).join('');
+  $('undoBtn').disabled=!undoStack.length||over;
+  $('hintBtn').disabled=over||hintsLeft<=0;
+  $('hintBadge').textContent=hintsLeft;
+  $('prevBtn').disabled=level<=1;
+  $('nextBtn').disabled=level>=loadProgress();
+}
+function pushUndo(){undoStack.push(marks.slice());if(undoStack.length>200)undoStack.shift();}
+const rc=i=>[(i/n)|0,i%n];
+
+// ===================== 행동 =====================
+function tryPlace(i,fromHint=false){
+  if(over||marks[i]===2)return;
+  const [r,c]=rc(i);
+  if(solSet.has(i)){
+    pushUndo();marks[i]=2;thread(r,c);
+    if(autoX)for(let j=0;j<n*n;j++){if(marks[j])continue;const [r2,c2]=rc(j);
+      if(r2===r||c2===c||reg[r2][c2]===reg[r][c]||(Math.abs(r2-r)<=1&&Math.abs(c2-c)<=1))marks[j]=1;}
+    update();
+    if(!fromHint)status('good',{k:Math.floor(Math.random()*5)});
+    if(marks.filter(m=>m===2).length===n)setTimeout(win,500);
+  }else{
+    cover--;pushUndo();marks[i]=1;
+    const el=boardEl.children[i];el.classList.remove('bad');void el.offsetWidth;el.classList.add('bad');
+    setTimeout(()=>el.classList.remove('bad'),450);
+    update();
+    if(cover<=0){over=true;update();setTimeout(fail,450);return;}
+    status('wrong',{c:cover,m:MAX_COVER});
+  }
+}
+function thread(r,c){
+  const x=((c+.5)/n*100)+'%',y=((r+.5)/n*100)+'%';
+  const h=document.createElement('div');h.className='thread h';h.style.top=y;h.style.setProperty('--ox',x);
+  const v=document.createElement('div');v.className='thread v';v.style.left=x;v.style.setProperty('--oy',y);
+  const p=document.createElement('div');p.className='pin';p.style.left=x;p.style.top=y;
+  wrap.append(h,v,p);setTimeout(()=>{h.remove();v.remove();p.remove();},1150);
+  const zone=[];
+  for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){if(!dr&&!dc)continue;const a=r+dr,b=c+dc;
+    if(a>=0&&b>=0&&a<n&&b<n)zone.push(boardEl.children[a*n+b]);}
+  zone.forEach(el=>el.classList.add('zone'));setTimeout(()=>zone.forEach(el=>el.classList.remove('zone')),650);
+}
+function hint(){
+  if(over)return;
+  if(hintsLeft<=0){status('noHint');return;}
+  let best=-1,bestFree=1e9;
+  for(let r=0;r<n;r++){const i=r*n+sol[r];if(marks[i]===2)continue;const g=reg[r][sol[r]];let free=0;
+    for(let j=0;j<n*n;j++){const [a,b]=rc(j);if(reg[a][b]===g&&marks[j]===0)free++;}
+    if(free<bestFree){bestFree=free;best=i;}}
+  if(best<0)return;
+  hintsLeft--;
+  const el=boardEl.children[best];el.classList.add('hint');setTimeout(()=>el.classList.remove('hint'),1200);
+  tryPlace(best,true);update();
+  if(!over)status('hintUsed',{h:hintsLeft});
+}
+const fmt=ms=>{const s=Math.floor(ms/1000);return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');};
+
+// ===================== 결과 =====================
+function win(){
+  over=true;saveProgress(level+1);update();
+  $('resBox').innerHTML=`
+    <h2>${t('solved')}</h2>
+    <div class="stars">${'★'.repeat(cover)}${'☆'.repeat(MAX_COVER-cover)}</div>
+    <div class="rname">「${t('cases')[caseIdx()]}」</div>
+    <div class="stats"><span>${t('time')}<b>${fmt(elapsed)}</b></span><span>${t('fame')}<b>${cover}/${MAX_COVER}</b></span><span>${t('hints')}<b>${HINT_MAX-hintsLeft}</b></span></div>
+    <div class="note">${t('briefs')[(level-1)%12]}<div class="sig">${t('sig')}</div></div>
+    <div class="btns"><button class="btn" id="rClose">${t('close')}</button><button class="btn primary" id="rNext">${t('nextCase')}</button></div>`;
+  open('mRes');
+  $('rNext').onclick=()=>{close('mRes');level++;loadLevel();};
+  $('rClose').onclick=()=>close('mRes');
+}
+function fail(){
+  $('resBox').innerHTML=`
+    <h2>${t('failTitle')}</h2>
+    <p style="margin:0 0 12px">${t('failSub')}</p>
+    <div class="note">${t('failNote')}<div class="sig">${t('failSig')}</div></div>
+    <div class="btns"><button class="btn primary" id="rRetry">${t('retry')}</button></div>`;
+  open('mRes');
+  $('rRetry').onclick=()=>{close('mRes');resetPlay();status('retryMsg');};
+}
+
+// ===================== 모달 =====================
+const open=id=>$(id).classList.remove('hidden');
+const close=id=>$(id).classList.add('hidden');
+const anyModal=()=>document.querySelector('.ov:not(.hidden)')!==null;
+
+// 튜토리얼 예시 보드
+const MREG=[[0,0,1,1],[0,0,1,1],[2,2,3,3],[2,2,3,3]];
+const MINIS=[
+  {agents:[1,7,8,14]},
+  {agents:[4,7],bad:[4,7],hl:[5,6]},
+  {agents:[5,10],bad:[10],zone:[0,1,2,4,6,8,9]},
+  {agents:[1],x:[0,2,3,4,5,6,9,13]}
+];
+function miniEl(s){
+  const g=document.createElement('div');g.className='mini';
+  for(let i=0;i<16;i++){
+    const r=(i/4)|0,c=i%4,d=document.createElement('div');d.className='cell';
+    paintCell(d,MREG,r,c,4,'2.5px solid #2a170a');
+    if(s.x?.includes(i))d.classList.add('x');
+    if(s.hl?.includes(i))d.classList.add('hl');
+    if(s.zone?.includes(i))d.classList.add('zone');
+    if(s.agents?.includes(i)){d.innerHTML=`<div class="chip" style="animation:none">${detectiveSVG()}</div>`;
+      if(s.bad?.includes(i))d.style.boxShadow='inset 0 0 0 999px rgba(184,50,42,.55)';}
+    g.appendChild(d);
+  }
+  return g;
+}
+let tutStep=0;
+function renderTut(){
+  const steps=t('tut'),s=steps[tutStep];
+  $('tutMini').innerHTML='';$('tutMini').appendChild(miniEl(MINIS[tutStep]));
+  $('tutH').textContent=s.h;$('tutP').innerHTML=s.p;
+  $('tutDots').innerHTML=steps.map((_,k)=>`<i class="${k===tutStep?'on':''}"></i>`).join('');
+  $('tutPrev').style.visibility=tutStep?'visible':'hidden';
+  $('tutNext').textContent=tutStep===steps.length-1?t('go'):t('next');
+}
+function openTut(){tutStep=0;renderTut();open('mTut');}
+function finishTut(){close('mTut');localStorage.setItem('sd-tut-done','1');}
+$('tutPrev').onclick=()=>{if(tutStep>0){tutStep--;renderTut();}};
+$('tutNext').onclick=()=>{if(tutStep<t('tut').length-1){tutStep++;renderTut();}else finishTut();};
+$('tutSkip').onclick=finishTut;
+
+// 설정
+function renderSettings(){
+  document.querySelectorAll('#langSeg button').forEach(b=>b.classList.toggle('on',b.dataset.lang===lang));
+  const sz=t('sizes');
+  $('sizeSel').innerHTML=[5,6,7,8].map(k=>`<option value="${k}" ${k===n?'selected':''}>${sz[k]}</option>`).join('');
+  $('autoChk').checked=autoX;
+}
+$('btnSet').onclick=()=>{renderSettings();open('mSet');};
+$('setClose').onclick=()=>close('mSet');
+$('langSeg').onclick=e=>{const b=e.target.closest('button');if(!b)return;
+  lang=b.dataset.lang;localStorage.setItem('sd-lang',lang);applyI18n();renderSettings();};
+$('sizeSel').onchange=e=>{n=+e.target.value;localStorage.setItem('sd-size',n);level=loadProgress();close('mSet');loadLevel();};
+$('autoChk').onchange=e=>{autoX=e.target.checked;localStorage.setItem('sd-autox',autoX?'1':'0');};
+$('howBtn').onclick=()=>{close('mSet');openTut();};
+$('restartBtn').onclick=()=>{if(confirm(t('confirmRestart'))){close('mSet');resetPlay();status('restarted');}};
+document.querySelectorAll('.ov').forEach(ov=>ov.addEventListener('click',e=>{if(e.target===ov&&ov.id==='mSet')close('mSet');}));
+
+function applyI18n(){
+  document.documentElement.lang=lang;
+  document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n));
+  document.title=lang==='ko'?'셜록도쿠':'Sherlockdoku';
+  if(reg)renderCaseTitle();
+  renderStatus();
+  if(!$('mTut').classList.contains('hidden'))renderTut();
+}
+
+// ===================== 입력 =====================
+let drag=null,lastTap={i:-1,t:0};
+boardEl.addEventListener('pointerdown',e=>{
+  const el=e.target.closest('.cell');if(!el||over||e.button===2)return;
+  e.preventDefault();const i=+el.dataset.i;
+  if(tool==='agent'){tryPlace(i);return;}
+  const now=Date.now();
+  if(lastTap.i===i&&now-lastTap.t<320){lastTap={i:-1,t:0};drag=null;tryPlace(i);return;}
+  lastTap={i,t:now};
+  if(marks[i]===2)return;
+  pushUndo();drag={val:marks[i]===1?0:1};marks[i]=drag.val;update();
+});
+boardEl.addEventListener('pointermove',e=>{
+  if(!drag||over)return;
+  const el=document.elementFromPoint(e.clientX,e.clientY)?.closest('.cell');if(!el)return;
+  const i=+el.dataset.i;if(marks[i]!==2&&marks[i]!==drag.val){marks[i]=drag.val;update();}
+});
+window.addEventListener('pointerup',()=>drag=null);
+boardEl.addEventListener('contextmenu',e=>{e.preventDefault();const el=e.target.closest('.cell');if(el)tryPlace(+el.dataset.i);});
+
+const setTool=k=>{tool=k;$('toolX').classList.toggle('on',k==='x');$('toolA').classList.toggle('on',k==='agent');};
+$('toolX').onclick=()=>setTool('x');
+$('toolA').onclick=()=>setTool('agent');
+$('undoBtn').onclick=()=>{if(over||!undoStack.length)return;marks=undoStack.pop();update();};
+$('hintBtn').onclick=hint;
+$('prevBtn').onclick=()=>{if(level>1){level--;loadLevel();}};
+$('nextBtn').onclick=()=>{if(level<loadProgress()){level++;loadLevel();}};
+
+// 타이머: 팝업이 열려 있거나 탭이 숨겨지면 정지
+let lastTick=Date.now();
+setInterval(()=>{const now=Date.now();
+  if(!over&&!anyModal()&&!document.hidden)elapsed+=now-lastTick;
+  lastTick=now;$('timer').textContent=fmt(elapsed);},250);
+
+// ===================== 시작 =====================
+applyI18n();
+level=loadProgress();
+loadLevel();
+if(!localStorage.getItem('sd-tut-done'))openTut();
+</script>
+</body>
+</html>

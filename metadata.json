@@ -1,0 +1,8 @@
+{
+  "name": "Sherlockdoku - 셜록도쿠 추리 퍼즐",
+  "description": "셜록 홈즈 테마의 연역 추리 로직 퍼즐. 반응형 모바일 레이아웃과 로컬 스토리지 상태 저장 기능을 제공합니다.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
