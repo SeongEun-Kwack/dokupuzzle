@@ -25,7 +25,7 @@ const MAX_COVER = 3;
 const HINT_MAX = 3;
 const MAX_AUTO_CLEAR = 5;
 
-/** Keep the standard App entry pointed at the active crossword game. */
+/** Main Sudoku game screen. */
 export default function App() {
   const [scene, setScene] = useState<'title' | 'loading' | 'main' | 'ending'>('title');
   const [loadProgress, setLoadProgress] = useState(0);

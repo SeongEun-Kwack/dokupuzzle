@@ -282,9 +282,25 @@ export function verifyPuzzle(puzzle: PuzzleData): VerifyResult {
   return { ok: true, level: logic.level };
 }
 
+/** 마지막 안전망: n-1개의 정답 칸을 단일 칸 영역으로 만들어 논리적으로 풀리는 판을 구성한다. */
+function generateEmergencyPuzzle(n: BoardSize, seed: number): PuzzleData | null {
+  const rng = mulberry32(seed ^ 0x5f3759df);
+  for (let attempt = 0; attempt < 10000; attempt++) {
+    const solution = randomPlacement(n, rng);
+    if (!solution) continue;
+    const regions = Array.from({ length: n }, () => Array(n).fill(n - 1) as number[]);
+    for (let row = 0; row < n - 1; row++) regions[row][solution[row]] = row;
+    const candidate: PuzzleData = { regions, solution, level: 1 };
+    const result = verifyPuzzle(candidate);
+    if (result.ok) return { ...candidate, level: result.level };
+  }
+  return null;
+}
+
 /** 이전 호출부와 호환되는 생성기. 검증되지 않은 판은 반환하지 않는다. */
 export function generatePuzzle(n: BoardSize, level: number): PuzzleData {
-  const rng = mulberry32((n * 100003 + level * 7919) | 0);
+  const seed = (n * 100003 + level * 7919) | 0;
+  const rng = mulberry32(seed);
   for (let attempt = 0; attempt < 2000; attempt++) {
     const solution = randomPlacement(n, rng);
     if (!solution) continue;
@@ -294,6 +310,8 @@ export function generatePuzzle(n: BoardSize, level: number): PuzzleData {
     const result = verifyPuzzle(candidate);
     if (result.ok) return { ...candidate, level: result.level };
   }
+  const emergency = generateEmergencyPuzzle(n, seed);
+  if (emergency) return emergency;
   throw new Error(`논리적으로 풀리는 퍼즐 생성 실패 (n=${n}, level=${level})`);
 }
 
