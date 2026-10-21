@@ -137,12 +137,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </button>
             <button
               onClick={() => {
-                if (window.confirm(translate(settings.language, 'confirmResetAll'))) {
-                  onResetAllData();
-                  onClose();
-                }
+                onResetAllData();
+                onClose();
               }}
-              className="py-2 px-4 rounded-xl text-xs font-semibold text-[#8f2d26] hover:bg-[#8f2d26]/10 cursor-pointer transition-colors mt-1"
+              className="py-2 px-4 rounded-xl text-xs font-semibold text-[#8f2d26] hover:bg-[#8f2d26]/10 active:scale-95 cursor-pointer transition-all mt-1"
             >
               {translate(settings.language, 'resetAll')}
             </button>

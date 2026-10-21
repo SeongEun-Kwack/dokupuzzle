@@ -23,7 +23,7 @@ import { OrientationLock } from './components/OrientationLock';
 
 const MAX_COVER = 3;
 const HINT_MAX = 3;
-const MAX_AUTO_CLEAR = 5;
+const MAX_AUTO_CLEAR = 3;
 
 /** Main Sudoku game screen. */
 export default function App() {
@@ -89,7 +89,10 @@ export default function App() {
     else sound.stopBgm();
   }, [settings.soundEnabled, scene]);
 
-  useEffect(() => () => sound.stopBgm(), []);
+  useEffect(() => {
+    storage.clearAllGameStates();
+    return () => sound.stopBgm();
+  }, []);
 
   const beginCase = () => {
     setScene('loading');
@@ -101,10 +104,17 @@ export default function App() {
       setLoadProgress(progress);
       if (progress === 100) {
         window.clearInterval(timer);
-        // Read the persisted case data as part of the loading integrity pass.
-        storage.loadActiveCase();
-        storage.loadLevelRecords(size);
-        storage.loadAutoClearInventory();
+        // Read persisted case data as part of loading integrity pass.
+        const active = storage.loadActiveCase();
+        const activeSize = active.size;
+        setSize(activeSize);
+        setLevel(active.level);
+        setMaxUnlocked(storage.loadProgress(activeSize));
+        setRecords(storage.loadLevelRecords(activeSize));
+        setHardUnlocked(storage.loadEndingUnlocked(activeSize));
+        setHardMaxUnlocked(storage.loadHardProgress(activeSize));
+        setHardRecords(storage.loadHardRecords(activeSize));
+        setAutoClearCount(storage.loadAutoClearInventory());
         setScene('main');
       }
     }, 90);
@@ -141,55 +151,38 @@ export default function App() {
     });
   }, []);
 
-  // Load level: checks for saved game state in localStorage or generates fresh
+  // Load level: always generates fresh without mid-game saves
   const initLevel = useCallback(
     (targetSize: BoardSize, targetLevel: number) => {
       setIsLoadingPuzzle(true);
       storage.saveActiveCase(targetSize, targetLevel);
+
+      // Clean board immediately on level init so no previous marks linger
+      const emptyMarks = Array<CellState>(targetSize * targetSize).fill(0);
+      setMarks(emptyMarks);
+      marksRef.current = emptyMarks;
+      setCover(MAX_COVER);
+      setHintsLeft(HINT_MAX);
+      setElapsed(0);
+      setScore(0);
+      scoreRef.current = 0;
+      setCombo(false);
+      setComboCell(null);
+      setAutoClearUsed(false);
+      setUndoStack([]);
+      setIsOver(false);
 
       // Async generation to avoid blocking UI frame
       setTimeout(() => {
         const p = generatePuzzle(targetSize, targetLevel, hardMode);
         setPuzzle(p);
 
-        // Check if there is an in-progress saved game state in localStorage
-        const saved = storage.loadGameState(targetSize, targetLevel, hardMode);
-        scoreRef.current = saved?.score ?? 0;
-        if (saved && !saved.isSolved && saved.marks.length === targetSize * targetSize) {
-          setMarks(saved.marks as CellState[]);
-          marksRef.current = saved.marks as CellState[];
-          setCover(saved.cover ?? MAX_COVER);
-          setHintsLeft(saved.hintsLeft ?? HINT_MAX);
-          setElapsed(saved.elapsed ?? 0);
-          setScore(saved.score ?? 0);
-          setCombo(saved.combo ?? false);
-          setComboCell(null);
-          setAutoClearUsed(saved.autoClearUsed ?? false);
-          setUndoStack((saved.undoStack as CellState[][]) ?? []);
-          setIsOver(saved.over ?? false);
-          setStatusText(translate(settings.language, 'resumed'));
-        } else {
-          // Fresh board initialization
-          const emptyMarks = Array<CellState>(targetSize * targetSize).fill(0);
-          setMarks(emptyMarks);
-          marksRef.current = emptyMarks;
-          setCover(MAX_COVER);
-          setHintsLeft(HINT_MAX);
-          setElapsed(0);
-          setScore(0);
-          scoreRef.current = 0;
-          setCombo(false);
-          setComboCell(null);
-          setAutoClearUsed(false);
-          setUndoStack([]);
-          setIsOver(false);
-          const tagNames = DICTIONARY[settings.language]?.tags || DICTIONARY.ko.tags;
-          const tagName = tagNames[p.level] || '';
-          const startMessage = translate(settings.language, 'start', { n: targetSize, tagName });
-          setStatusText(hardMode
-            ? `${startMessage} ${settings.language === 'ko' ? '하드 규칙: 두 긴 대각선에도 탐정을 각각 한 명 이하로 배치하세요.' : 'Hard rule: place at most one detective on each long diagonal.'}`
-            : startMessage);
-        }
+        const tagNames = DICTIONARY[settings.language]?.tags || DICTIONARY.ko.tags;
+        const tagName = tagNames[p.level] || '';
+        const startMessage = translate(settings.language, 'start', { n: targetSize, tagName });
+        setStatusText(hardMode
+          ? `${startMessage} ${settings.language === 'ko' ? '하드 규칙: 두 긴 대각선에도 탐정을 각각 한 명 이하로 배치하세요.' : 'Hard rule: place at most one detective on each long diagonal.'}`
+          : startMessage);
 
         setBadCell(null);
         setHintCell(null);
@@ -201,10 +194,12 @@ export default function App() {
     [settings.language, hardMode]
   );
 
-  // Trigger init on size or level change
+  // Trigger init on size or level change, or when entering main scene
   useEffect(() => {
-    initLevel(size, level);
-  }, [size, level, initLevel]);
+    if (scene === 'main' || !puzzle) {
+      initLevel(size, level);
+    }
+  }, [size, level, initLevel, scene]);
 
   useEffect(() => {
     setMaxUnlocked(storage.loadProgress(size));
@@ -215,44 +210,27 @@ export default function App() {
     if (hardMode && !storage.loadEndingUnlocked(size)) setHardMode(false);
   }, [size]);
 
-  // Auto-save in-progress game to localStorage on marks / elapsed / cover change
-  useEffect(() => {
-    if (isLoadingPuzzle || !puzzle || isOver || resultModalType) return;
-
-    storage.saveGameState({
-      n: size,
-      level,
-      marks,
-      cover,
-      hintsLeft,
-      elapsed,
-      score,
-      combo,
-      autoClearUsed,
-      undoStack,
-      over: isOver,
-      isSolved: false,
-      statusKey: '',
-      hardMode,
-      savedAt: Date.now()
-    });
-  }, [
-    size,
-    level,
-    marks,
-    cover,
-    hintsLeft,
-    elapsed,
-    score,
-    combo,
-    autoClearUsed,
-    undoStack,
-    isOver,
-    isLoadingPuzzle,
-    puzzle,
-      resultModalType,
-      hardMode
-  ]);
+  // Action: Switch Case (Prev / Next or selection from Dossier) - resets marks and board state immediately
+  const switchCase = useCallback((targetLevel: number) => {
+    const emptyMarks = Array<CellState>(size * size).fill(0);
+    setMarks(emptyMarks);
+    marksRef.current = emptyMarks;
+    setUndoStack([]);
+    setBadCell(null);
+    setHintCell(null);
+    setZoneCells([]);
+    setThreadEffect(null);
+    setAutoClearUsed(false);
+    setCombo(false);
+    setComboCell(null);
+    setScore(0);
+    scoreRef.current = 0;
+    setElapsed(0);
+    setCover(MAX_COVER);
+    setHintsLeft(HINT_MAX);
+    setIsOver(false);
+    setLevel(targetLevel);
+  }, [size]);
 
   // Live Timer: increment elapsed while active and not paused by modal/tab
   useEffect(() => {
@@ -380,23 +358,23 @@ export default function App() {
             setMaxUnlocked(storage.loadProgress(size));
           }
 
+          const finalScore = Math.max(0, settledScore - Math.max(0, Math.floor(elapsed / 1000) - 180));
           const record: LevelRecord = {
             level,
             timeMs: elapsed,
-            score: settledScore - Math.max(0, Math.floor(elapsed / 1000) - 180),
+            score: finalScore,
             stars: cover,
             hintsUsed: HINT_MAX - hintsLeft,
             solvedAt: Date.now()
           };
-          const currentRecords = hardMode ? hardRecords : records;
-          const alreadySolved = currentRecords.some(item => item.level === level);
           if (hardMode) storage.saveHardRecord(size, record);
           else storage.saveLevelRecord(size, record);
-          if (!alreadySolved && level % 3 === 0) {
-            const nextInventory = Math.min(MAX_AUTO_CLEAR, storage.loadAutoClearInventory() + 1);
-            storage.saveAutoClearInventory(nextInventory);
-            setAutoClearCount(nextInventory);
-          }
+
+          // Award 1 auto-clear item per stage clear (max count: 3)
+          const nextInventory = Math.min(MAX_AUTO_CLEAR, storage.loadAutoClearInventory() + 1);
+          storage.saveAutoClearInventory(nextInventory);
+          setAutoClearCount(nextInventory);
+
           if (hardMode) setHardRecords(storage.loadHardRecords(size));
           else setRecords(storage.loadLevelRecords(size));
           storage.clearGameState(size, level, hardMode);
@@ -408,8 +386,8 @@ export default function App() {
       } else {
         // Incorrect placement!
         sound.playWrong();
-        setScore(prev => prev - 5);
-        scoreRef.current -= 5;
+        setScore(prev => Math.max(0, prev - 5));
+        scoreRef.current = Math.max(0, scoreRef.current - 5);
         setCombo(false);
         setComboCell(null);
         const nextCover = cover - 1;
@@ -523,8 +501,10 @@ export default function App() {
     setHintsLeft(HINT_MAX);
     setElapsed(0);
     setScore(0);
+    scoreRef.current = 0;
     setCombo(false);
     setComboCell(null);
+    setAutoClearUsed(false);
     setUndoStack([]);
     setIsOver(false);
     setBadCell(null);
@@ -532,7 +512,7 @@ export default function App() {
     setZoneCells([]);
     setThreadEffect(null);
     setStatusText(translate(settings.language, 'restarted'));
-  }, [size, level, settings.language]);
+  }, [size, level, hardMode, settings.language]);
 
   const handleAutoClear = useCallback(() => {
     if (autoClearUsed) {
@@ -565,11 +545,68 @@ export default function App() {
     setStatusText(translate(settings.language, 'autoClearDone'));
   }, [autoClearUsed, autoClearCount, puzzle, marks, size, settings.language, pushUndo]);
 
-  // Action: Reset All Data
+  // Action: Reset All Data and return to title page
   const handleResetAllData = useCallback(() => {
+    // 1. Wipe all persisted records, active cases, in-progress states, and inventories
     storage.resetAll();
-    window.location.reload();
-  }, []);
+
+    // 2. Stop audio/BGM
+    sound.stopBgm();
+
+    // 3. Reset user settings to defaults while preserving language
+    const defaultSettings: UserSettings = {
+      language: settings.language,
+      boardSize: 6,
+      soundEnabled: settings.soundEnabled,
+      tutorialCompleted: true
+    };
+    storage.saveSettings(defaultSettings);
+    setSettings(defaultSettings);
+
+    // 4. Reset board size, level progression, and records
+    const defaultSize: BoardSize = 6;
+    setSize(defaultSize);
+    setLevel(1);
+    setHardMode(false);
+    setMaxUnlocked(1);
+    setRecords([]);
+    setHardUnlocked(false);
+    setHardMaxUnlocked(1);
+    setHardRecords([]);
+
+    // 5. Reset board game state and visual effects
+    const emptyMarks = Array<CellState>(defaultSize * defaultSize).fill(0);
+    setMarks(emptyMarks);
+    marksRef.current = emptyMarks;
+    setPuzzle(null);
+    setIsLoadingPuzzle(false);
+    setCover(MAX_COVER);
+    setHintsLeft(HINT_MAX);
+    setElapsed(0);
+    setScore(0);
+    scoreRef.current = 0;
+    setCombo(false);
+    setComboCell(null);
+    setAutoClearCount(1);
+    setAutoClearUsed(false);
+    setUndoStack([]);
+    setIsOver(false);
+    setStatusText('');
+    setBadCell(null);
+    setHintCell(null);
+    setZoneCells([]);
+    setThreadEffect(null);
+
+    // 6. Close all active modals
+    setIsSettingsOpen(false);
+    setIsTutorialOpen(false);
+    setIsDossierOpen(false);
+    setResultModalType(null);
+    setIsRestartConfirmOpen(false);
+
+    // 7. Transition directly to title scene
+    setScene('title');
+  }, [settings.language, settings.soundEnabled]);
 
   // Calculate current placed count
   const placedCount = marks.filter(m => m === 2).length;
@@ -580,7 +617,7 @@ export default function App() {
   if (scene === 'loading') return <div className="scene-shell scene-loading"><div className="scene-card"><p className="scene-kicker">SHERLOCK & WATSON</p><h1>{translate(settings.language, 'loadingTitle')}</h1><p>{loadProgress < 100 ? translate(settings.language, 'integrity') : translate(settings.language, 'loadingDone')}</p><div className="loading-track"><span style={{ width: `${loadProgress}%` }} /></div><strong>{loadProgress}%</strong></div></div>;
   if (scene === 'ending') return <div className="scene-shell scene-ending"><div className="scene-card"><p className="scene-kicker">DR. JOHN H. WATSON</p><h1>{translate(settings.language, 'endingTitle')}</h1><p className="ending-quote">“{translate(settings.language, 'endingText')}”</p>{hardUnlocked && <p className="text-[#ffd88a] mb-5">{settings.language === 'ko' ? `${size}×${size} 하드 모드가 해금되었습니다.` : `${size}×${size} Hard Mode unlocked.`}</p>}<button className="wood-button scene-return" onClick={() => { setHardMode(false); setLevel(1); setScene('title'); }}>{translate(settings.language, 'returnTitle')}</button></div></div>;
 
-  const effectiveScore = score - Math.max(0, Math.floor(elapsed / 1000) - 180);
+  const effectiveScore = Math.max(0, score - Math.max(0, Math.floor(elapsed / 1000) - 180));
 
   return (
     <div className="scene-main min-h-screen min-h-[100dvh] flex items-center justify-center py-2 sm:py-4 px-2 sm:px-4">
@@ -596,8 +633,8 @@ export default function App() {
             bestScore={(hardMode ? hardRecords : records).find(r => r.level === level)?.score ?? null}
             canPrev={level > 1}
             canNext={level < (hardMode ? hardMaxUnlocked : maxUnlocked)}
-            onPrev={() => setLevel(l => Math.max(1, l - 1))}
-            onNext={() => setLevel(l => Math.min(hardMode ? hardMaxUnlocked : maxUnlocked, l + 1))}
+            onPrev={() => switchCase(Math.max(1, level - 1))}
+            onNext={() => switchCase(Math.min(hardMode ? hardMaxUnlocked : maxUnlocked, level + 1))}
             onOpenDossier={() => setIsDossierOpen(true)}
             onOpenSettings={() => setIsSettingsOpen(true)}
           />
@@ -727,7 +764,7 @@ export default function App() {
             setHardUnlocked(true);
             setScene('ending');
           }
-          else setLevel(l => l + 1);
+          else switchCase(level + 1);
         }}
         onRetry={() => {
           setResultModalType(null);
@@ -746,10 +783,10 @@ export default function App() {
         maxUnlocked={hardMode ? hardMaxUnlocked : maxUnlocked}
         records={hardMode ? hardRecords : records}
         caseName={caseName}
-        onSelectLevel={lvl => setLevel(lvl)}
+        onSelectLevel={lvl => switchCase(lvl)}
         hardUnlocked={hardUnlocked}
         hardMode={hardMode}
-        onSelectMode={mode => { setHardMode(mode); setLevel(1); setIsDossierOpen(false); }}
+        onSelectMode={mode => { setHardMode(mode); switchCase(1); setIsDossierOpen(false); }}
         onClose={() => setIsDossierOpen(false)}
       />
 

@@ -28,7 +28,7 @@ export const Tray: React.FC<TrayProps> = ({
         <span className={labelClass}>{translate(language, 'tHint')}</span>
       </button>
 
-      <button onClick={onAutoClear} disabled={autoClearCount <= 0 || autoClearUsed} className={`${itemClass} disabled:opacity-40 disabled:cursor-default`} title={translate(language, 'autoClearDesc')}>
+      <button onClick={onAutoClear} disabled={autoClearCount <= 0 || autoClearUsed} className={`${itemClass} disabled:opacity-40 disabled:cursor-default`} title={`${translate(language, 'autoClearDesc')} (${autoClearCount}/3)`}>
         <span className={iconClass}><Sparkles className="w-6 h-6 sm:w-7 sm:h-7 stroke-[2.4] text-[#4a2a12]" /><span className="absolute -right-1.5 -bottom-1.5 min-w-5 h-5 px-1 rounded-md bg-[#5f8f3e] text-white text-xs font-black grid place-items-center border-2 border-[#fff3dc] shadow-sm">{autoClearCount}</span></span>
         <span className={labelClass}>{translate(language, 'autoClear')}</span>
       </button>

@@ -136,35 +136,30 @@ export const storage = {
     } catch {}
   },
 
-  // In-progress Game State (Restored after closing/refreshing)
-  saveGameState(state: SavedGameState) {
-    try {
-      const key = `${PREFIX}state_${state.n}_${state.hardMode ? 'hard_' : ''}${state.level}`;
-      localStorage.setItem(key, JSON.stringify(state));
-    } catch (e) {
-      console.warn('Failed to save in-progress game state:', e);
-    }
+  // In-progress Game State (Mid-game saves disabled per user request: only clear records remain)
+  saveGameState(_state: SavedGameState) {
+    // Intentionally no-op: do not persist mid-game board state
   },
 
-  loadGameState(size: BoardSize, level: number, hardMode = false): SavedGameState | null {
-    try {
-      const key = `${PREFIX}state_${size}_${hardMode ? 'hard_' : ''}${level}`;
-      const json = localStorage.getItem(key);
-      if (!json) return null;
-      const data = JSON.parse(json) as SavedGameState;
-      if (data && data.n === size && data.level === level && Boolean(data.hardMode) === hardMode && Array.isArray(data.marks)) {
-        return data;
-      }
-      return null;
-    } catch {
-      return null;
-    }
+  loadGameState(_size: BoardSize, _level: number, _hardMode = false): SavedGameState | null {
+    // Always start fresh, never restore in-progress marks
+    return null;
   },
 
   clearGameState(size: BoardSize, level: number, hardMode = false) {
     try {
       const key = `${PREFIX}state_${size}_${hardMode ? 'hard_' : ''}${level}`;
       localStorage.removeItem(key);
+    } catch {}
+  },
+
+  clearAllGameStates() {
+    try {
+      Object.keys(localStorage).forEach(k => {
+        if (k.startsWith(`${PREFIX}state_`)) {
+          localStorage.removeItem(k);
+        }
+      });
     } catch {}
   },
 
@@ -207,12 +202,12 @@ export const storage = {
         localStorage.setItem(`${PREFIX}auto_clear_inventory`, '1');
         return 1;
       }
-      return Math.min(5, Math.max(0, Number(value) || 0));
+      return Math.min(3, Math.max(0, Number(value) || 0));
     } catch { return 1; }
   },
 
   saveAutoClearInventory(count: number) {
-    try { localStorage.setItem(`${PREFIX}auto_clear_inventory`, String(Math.min(5, Math.max(0, count)))); } catch {}
+    try { localStorage.setItem(`${PREFIX}auto_clear_inventory`, String(Math.min(3, Math.max(0, count)))); } catch {}
   },
 
   resetAll() {

@@ -21,6 +21,7 @@ interface CaseDossierModalProps {
 export const CaseDossierModal: React.FC<CaseDossierModalProps> = ({
   isOpen,
   language,
+  boardSize,
   currentLevel,
   maxUnlocked,
   records,
