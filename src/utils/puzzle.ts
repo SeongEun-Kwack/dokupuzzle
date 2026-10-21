@@ -19,14 +19,15 @@ export function cellsTouch(r1: number, c1: number, r2: number, c2: number): bool
   return Math.abs(r1 - r2) <= 1 && Math.abs(c1 - c2) <= 1;
 }
 
-export function queensConflict(regions: number[][], a: Cell, b: Cell): boolean {
+export function queensConflict(regions: number[][], a: Cell, b: Cell, hardMode = false): boolean {
   const [r1, c1] = a;
   const [r2, c2] = b;
   if (r1 === r2 && c1 === c2) return true;
-  return r1 === r2 || c1 === c2 || regions[r1][c1] === regions[r2][c2] || cellsTouch(r1, c1, r2, c2);
+  const sameLongDiagonal = hardMode && Math.abs(r1 - r2) === Math.abs(c1 - c2);
+  return r1 === r2 || c1 === c2 || regions[r1][c1] === regions[r2][c2] || cellsTouch(r1, c1, r2, c2) || sameLongDiagonal;
 }
 
-export function isSolved(regions: number[][], queens: Cell[]): boolean {
+export function isSolved(regions: number[][], queens: Cell[], hardMode = false): boolean {
   const n = regions.length;
   if (queens.length !== n) return false;
   for (const [r, c] of queens) {
@@ -34,7 +35,7 @@ export function isSolved(regions: number[][], queens: Cell[]): boolean {
   }
   for (let i = 0; i < queens.length; i++) {
     for (let j = i + 1; j < queens.length; j++) {
-      if (queensConflict(regions, queens[i], queens[j])) return false;
+      if (queensConflict(regions, queens[i], queens[j], hardMode)) return false;
     }
   }
   return true;
@@ -61,13 +62,14 @@ function shuffle<T>(items: T[], rng: () => number): T[] {
 
 const sameSolution = (a: number[], b: number[]) => a.length === b.length && a.every((v, i) => v === b[i]);
 
-function randomPlacement(n: number, rng: () => number): number[] | null {
+function randomPlacement(n: number, rng: () => number, hardMode = false): number[] | null {
   const placement: number[] = [];
   const usedColumns = Array(n).fill(false) as boolean[];
   const search = (row: number): boolean => {
     if (row === n) return true;
     for (const col of shuffle(Array.from({ length: n }, (_, i) => i), rng)) {
-      if (usedColumns[col] || (row > 0 && cellsTouch(row, col, row - 1, placement[row - 1]))) continue;
+      if (usedColumns[col] || (row > 0 && cellsTouch(row, col, row - 1, placement[row - 1])) ||
+        (hardMode && placement.some((prevCol, prevRow) => Math.abs(row - prevRow) === Math.abs(col - prevCol)))) continue;
       usedColumns[col] = true;
       placement[row] = col;
       if (search(row + 1)) return true;
@@ -137,7 +139,7 @@ export function validateRegions(regions: number[][], n: number): string | null {
   return null;
 }
 
-function findSolutions(regions: number[][], n: number, limit = 2): number[][] {
+function findSolutions(regions: number[][], n: number, limit = 2, hardMode = false): number[][] {
   const solutions: number[][] = [];
   const queens: Cell[] = [];
   const search = (row: number) => {
@@ -148,7 +150,7 @@ function findSolutions(regions: number[][], n: number, limit = 2): number[][] {
     }
     for (let col = 0; col < n && solutions.length < limit; col++) {
       const cell: Cell = [row, col];
-      if (queens.some(queen => queensConflict(regions, queen, cell))) continue;
+      if (queens.some(queen => queensConflict(regions, queen, cell, hardMode))) continue;
       queens.push(cell);
       search(row + 1);
       queens.pop();
@@ -160,7 +162,7 @@ function findSolutions(regions: number[][], n: number, limit = 2): number[][] {
 
 type LogicResult = { solved: boolean; level: number; solution: number[] | null };
 
-function logicSolve(regions: number[][], n: number): LogicResult {
+function logicSolve(regions: number[][], n: number, hardMode = false): LogicResult {
   const cellCount = n * n;
   const candidates = new Uint8Array(cellCount).fill(1);
   const placed = new Uint8Array(cellCount);
@@ -169,11 +171,20 @@ function logicSolve(regions: number[][], n: number): LogicResult {
   for (let c = 0; c < n; c++) units.push(Array.from({ length: n }, (_, r) => r * n + c));
   for (let g = 0; g < n; g++) units.push([]);
   for (let i = 0; i < cellCount; i++) units[2 * n + regions[Math.floor(i / n)][i % n]].push(i);
+  if (hardMode) {
+    const mainDiagonal: number[] = [];
+    const antiDiagonal: number[] = [];
+    for (let r = 0; r < n; r++) {
+      mainDiagonal.push(r * n + r);
+      antiDiagonal.push(r * n + (n - 1 - r));
+    }
+    units.push(mainDiagonal, antiDiagonal);
+  }
 
   const conflicts = new Uint8Array(cellCount * cellCount);
   for (let i = 0; i < cellCount; i++) {
     for (let j = 0; j < cellCount; j++) {
-      if (i !== j && queensConflict(regions, [Math.floor(i / n), i % n], [Math.floor(j / n), j % n])) {
+      if (i !== j && queensConflict(regions, [Math.floor(i / n), i % n], [Math.floor(j / n), j % n], hardMode)) {
         conflicts[i * cellCount + j] = 1;
       }
     }
@@ -276,12 +287,12 @@ export function verifyPuzzle(puzzle: PuzzleData): VerifyResult {
     return { ok: false, reason: '정답 배열 형식 오류' };
   }
   const solutionCells = puzzle.solution.map((col, row) => [row, col] as const);
-  if (!isSolved(puzzle.regions, solutionCells)) return { ok: false, reason: '저장된 정답이 게임 규칙을 어김' };
-  const solutions = findSolutions(puzzle.regions, n, 2);
+  if (!isSolved(puzzle.regions, solutionCells, puzzle.hardMode)) return { ok: false, reason: '저장된 정답이 게임 규칙을 어김' };
+  const solutions = findSolutions(puzzle.regions, n, 2, puzzle.hardMode);
   if (!solutions.length) return { ok: false, reason: '해가 없음' };
   if (solutions.length > 1) return { ok: false, reason: '해가 2개 이상' };
   if (!sameSolution(solutions[0], puzzle.solution)) return { ok: false, reason: '찾은 해가 저장된 정답과 다름' };
-  const logic = logicSolve(puzzle.regions, n);
+  const logic = logicSolve(puzzle.regions, n, puzzle.hardMode);
   if (!logic.solved || !logic.solution || !sameSolution(logic.solution, puzzle.solution)) {
     return { ok: false, reason: '논리 풀이만으로 풀리지 않음' };
   }
@@ -304,19 +315,19 @@ function generateEmergencyPuzzle(n: BoardSize, seed: number): PuzzleData | null 
 }
 
 /** 이전 호출부와 호환되는 생성기. 검증되지 않은 판은 반환하지 않는다. */
-export function generatePuzzle(n: BoardSize, level: number): PuzzleData {
-  const seed = (n * 100003 + level * 7919) | 0;
+export function generatePuzzle(n: BoardSize, level: number, hardMode = false): PuzzleData {
+  const seed = (n * 100003 + level * 7919 + (hardMode ? 0x6d2b79f5 : 0)) | 0;
   const rng = mulberry32(seed);
   for (let attempt = 0; attempt < 2000; attempt++) {
-    const solution = randomPlacement(n, rng);
+    const solution = randomPlacement(n, rng, hardMode);
     if (!solution) continue;
     const regions = growRegions(n, solution, rng);
     if (!regions) continue;
-    const candidate: PuzzleData = { regions, solution, level: 0 };
+    const candidate: PuzzleData = { regions, solution, level: 0, hardMode };
     const result = verifyPuzzle(candidate);
     if (result.ok) return { ...candidate, level: result.level };
   }
-  const emergency = generateEmergencyPuzzle(n, seed);
+  const emergency = hardMode ? null : generateEmergencyPuzzle(n, seed);
   if (emergency) return emergency;
   throw new Error(`논리적으로 풀리는 퍼즐 생성 실패 (n=${n}, level=${level})`);
 }

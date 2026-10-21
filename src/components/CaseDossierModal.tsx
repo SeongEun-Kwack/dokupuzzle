@@ -13,6 +13,9 @@ interface CaseDossierModalProps {
   caseName: string;
   onSelectLevel: (lvl: number) => void;
   onClose: () => void;
+  hardUnlocked: boolean;
+  hardMode: boolean;
+  onSelectMode: (hardMode: boolean) => void;
 }
 
 export const CaseDossierModal: React.FC<CaseDossierModalProps> = ({
@@ -23,7 +26,10 @@ export const CaseDossierModal: React.FC<CaseDossierModalProps> = ({
   records,
   caseName,
   onSelectLevel,
-  onClose
+  onClose,
+  hardUnlocked,
+  hardMode,
+  onSelectMode
 }) => {
   if (!isOpen) return null;
 
@@ -33,7 +39,7 @@ export const CaseDossierModal: React.FC<CaseDossierModalProps> = ({
   const recordMap = new Map<number, LevelRecord>();
   records.forEach(r => recordMap.set(r.level, r));
 
-  const totalStagesToShow = Math.max(16, maxUnlocked);
+  const totalStagesToShow = Math.max(hardMode ? 88 : 16, maxUnlocked);
 
   return (
     <div
@@ -62,6 +68,10 @@ export const CaseDossierModal: React.FC<CaseDossierModalProps> = ({
 
         {/* Content */}
         <div className="p-4 sm:p-5 flex flex-col gap-3 text-left">
+          {hardUnlocked && <div className="flex gap-2">
+            <button onClick={() => onSelectMode(false)} className={`flex-1 rounded-lg py-2 text-xs font-black ${!hardMode ? 'bg-[#6e4323] text-[#fff1d6]' : 'bg-[#ebd4ad] text-[#4a2a12]'}`}>{language === 'ko' ? '일반 모드' : 'Normal'}</button>
+            <button onClick={() => onSelectMode(true)} className={`flex-1 rounded-lg py-2 text-xs font-black ${hardMode ? 'bg-[#6e4323] text-[#fff1d6]' : 'bg-[#ebd4ad] text-[#4a2a12]'}`}>{language === 'ko' ? `${boardSize}×${boardSize} 하드` : `${boardSize}×${boardSize} Hard`}</button>
+          </div>}
           {/* Current Stage Card */}
           <div className="paper-note p-3.5">
             <div className="font-serif font-black text-base sm:text-lg text-[#6e4323] mb-1.5 flex items-center justify-between">
@@ -88,10 +98,10 @@ export const CaseDossierModal: React.FC<CaseDossierModalProps> = ({
             <div className="flex items-center justify-between text-xs font-bold text-[#6e4323] mb-2">
               <span className="flex items-center gap-1">
                 <Award className="w-3.5 h-3.5" />
-                사건 이동 ({records.length}개 해결 완료)
+                {hardMode ? (language === 'ko' ? `하드 사건 이동 (${records.length}개 해결)` : `Hard Cases (${records.length} solved)`) : `사건 이동 (${records.length}개 해결 완료)`}
               </span>
               <span className="text-[11px] text-[#4a2a12]/65">
-                최대 해금: Case {String(maxUnlocked).padStart(3, '0')}
+                {language === 'ko' ? '최대 해금' : 'Unlocked through'}: Case {String(maxUnlocked).padStart(3, '0')}
               </span>
             </div>
 

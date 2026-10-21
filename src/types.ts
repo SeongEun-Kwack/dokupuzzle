@@ -8,6 +8,7 @@ export interface PuzzleData {
   regions: number[][]; // [r][c] => regionIndex (0..n-1)
   solution: number[];  // solution[r] = col
   level: number;       // 1: Observation, 2: Deduction, 3: Elimination
+  hardMode?: boolean;
 }
 
 export interface SavedGameState {
@@ -26,6 +27,7 @@ export interface SavedGameState {
   score?: number;
   combo?: boolean;
   autoClearUsed?: boolean;
+  hardMode?: boolean;
 }
 
 export interface LevelRecord {

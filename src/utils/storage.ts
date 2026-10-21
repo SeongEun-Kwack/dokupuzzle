@@ -97,23 +97,62 @@ export const storage = {
     } catch {}
   },
 
+  loadEndingUnlocked(size: BoardSize): boolean {
+    try { return localStorage.getItem(`${PREFIX}ending_${size}`) === '1'; } catch { return false; }
+  },
+
+  saveEndingUnlocked(size: BoardSize) {
+    try { localStorage.setItem(`${PREFIX}ending_${size}`, '1'); } catch {}
+  },
+
+  loadHardProgress(size: BoardSize): number {
+    try { return Math.max(1, Number(localStorage.getItem(`${PREFIX}hard_prog_${size}`)) || 1); } catch { return 1; }
+  },
+
+  saveHardProgress(size: BoardSize, level: number) {
+    try {
+      const key = `${PREFIX}hard_prog_${size}`;
+      if (level > this.loadHardProgress(size)) localStorage.setItem(key, String(level));
+    } catch {}
+  },
+
+  loadHardRecords(size: BoardSize): LevelRecord[] {
+    try {
+      const json = localStorage.getItem(`${PREFIX}hard_records_${size}`);
+      return json ? JSON.parse(json) : [];
+    } catch { return []; }
+  },
+
+  saveHardRecord(size: BoardSize, record: LevelRecord) {
+    try {
+      const key = `${PREFIX}hard_records_${size}`;
+      const records = this.loadHardRecords(size);
+      const index = records.findIndex(item => item.level === record.level);
+      if (index >= 0) {
+        const prev = records[index];
+        records[index] = { ...record, timeMs: Math.min(prev.timeMs, record.timeMs), score: Math.max(prev.score ?? 0, record.score ?? 0), stars: Math.max(prev.stars, record.stars) };
+      } else records.push(record);
+      localStorage.setItem(key, JSON.stringify(records));
+    } catch {}
+  },
+
   // In-progress Game State (Restored after closing/refreshing)
   saveGameState(state: SavedGameState) {
     try {
-      const key = `${PREFIX}state_${state.n}_${state.level}`;
+      const key = `${PREFIX}state_${state.n}_${state.hardMode ? 'hard_' : ''}${state.level}`;
       localStorage.setItem(key, JSON.stringify(state));
     } catch (e) {
       console.warn('Failed to save in-progress game state:', e);
     }
   },
 
-  loadGameState(size: BoardSize, level: number): SavedGameState | null {
+  loadGameState(size: BoardSize, level: number, hardMode = false): SavedGameState | null {
     try {
-      const key = `${PREFIX}state_${size}_${level}`;
+      const key = `${PREFIX}state_${size}_${hardMode ? 'hard_' : ''}${level}`;
       const json = localStorage.getItem(key);
       if (!json) return null;
       const data = JSON.parse(json) as SavedGameState;
-      if (data && data.n === size && data.level === level && Array.isArray(data.marks)) {
+      if (data && data.n === size && data.level === level && Boolean(data.hardMode) === hardMode && Array.isArray(data.marks)) {
         return data;
       }
       return null;
@@ -122,9 +161,9 @@ export const storage = {
     }
   },
 
-  clearGameState(size: BoardSize, level: number) {
+  clearGameState(size: BoardSize, level: number, hardMode = false) {
     try {
-      const key = `${PREFIX}state_${size}_${level}`;
+      const key = `${PREFIX}state_${size}_${hardMode ? 'hard_' : ''}${level}`;
       localStorage.removeItem(key);
     } catch {}
   },
