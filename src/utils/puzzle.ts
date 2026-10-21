@@ -6,6 +6,7 @@ export const PALETTE = [
 ];
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 /* ───────────────── 타입 ───────────────── */
 
 export type Lang = 'ko' | 'en';
@@ -92,6 +93,8 @@ export function generateCrossword(
 
 =======
 >>>>>>> parent of 40664f2 (fix: 정답이 50/50% 일 경우 regenerated)
+=======
+>>>>>>> parent of 40664f2 (fix: 정답이 50/50% 일 경우 regenerated)
 export function mulberry32(a: number) {
   return function () {
     a |= 0;
@@ -112,6 +115,7 @@ function shuffle<T>(arr: T[], rng: () => number): T[] {
 }
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 /** 한글은 음절 1개 = 1칸, 영어는 알파벳 1개 = 1칸 */
 export function splitChars(s: string): string[] {
   return Array.from(s.normalize('NFC').trim().toUpperCase());
@@ -119,6 +123,8 @@ export function splitChars(s: string): string[] {
 
 const inB = (r: number, c: number, n: number) => r >= 0 && c >= 0 && r < n && c < n;
 =======
+=======
+>>>>>>> parent of 40664f2 (fix: 정답이 50/50% 일 경우 regenerated)
 function randomPlacement(n: number, rng: () => number): number[] | null {
   const perm: number[] = [];
   const used = Array(n).fill(false);
@@ -366,6 +372,7 @@ function logicSolve(reg: number[][], n: number): { solved: boolean; level: numbe
       if (!best.length) continue;
 
 <<<<<<< HEAD
+<<<<<<< HEAD
       const [r, c, dir] = best[Math.floor(rng() * best.length)];
       placeWord(g, used, chars, r, c, dir);
       placed.push({ dir, row: r, col: c, answer: chars, clue: w.clue, hint: w.hint });
@@ -410,6 +417,8 @@ export function checkInput(data: CrosswordData, input: string[][]) {
 }
 
 =======
+=======
+>>>>>>> parent of 40664f2 (fix: 정답이 50/50% 일 경우 regenerated)
     for (let i = 0; i < N; i++) {
       if (!cand[i] || placed[i]) continue;
       const cd = cand.slice();
@@ -462,6 +471,9 @@ export function generatePuzzle(n: BoardSize, level: number): PuzzleData {
   };
 }
 
+<<<<<<< HEAD
+>>>>>>> parent of 40664f2 (fix: 정답이 50/50% 일 경우 regenerated)
+=======
 >>>>>>> parent of 40664f2 (fix: 정답이 50/50% 일 경우 regenerated)
 export function formatTime(ms: number): string {
   const s = Math.floor(ms / 1000);
