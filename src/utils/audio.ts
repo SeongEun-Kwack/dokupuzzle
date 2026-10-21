@@ -7,8 +7,9 @@ class SoundSystem {
   private lastComboVoiceIndex = -1;
   private ctx: AudioContext | null = null;
   private enabled: boolean = true;
-  private bgmTimer: ReturnType<typeof setInterval> | null = null;
-  private bgmStep = 0;
+  
+  // MP3 BGM 관리를 위한 오디오 객체
+  private bgmAudio: HTMLAudioElement | null = null;
 
   constructor() {
     // Initialized lazily on first user interaction
@@ -39,34 +40,26 @@ class SoundSystem {
     }
   }
 
+  // 파일 기반 BGM 재생 (생성된 음원 활용)
   public startBgm() {
-    if (!this.enabled || this.bgmTimer) return;
-    this.initCtx();
-    if (!this.ctx) return;
-    const melody = [659, 784, 880, 659, 587, 698, 784, 587, 523, 659, 784, 880, 784, 698, 587, 523];
-    const playStep = () => {
-      if (!this.ctx || !this.enabled) return;
-      const now = this.ctx.currentTime;
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(melody[this.bgmStep % melody.length], now);
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(0.035, now + 0.012);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.14);
-      osc.connect(gain);
-      gain.connect(this.ctx.destination);
-      osc.start(now);
-      osc.stop(now + 0.15);
-      this.bgmStep++;
-    };
-    playStep();
-    this.bgmTimer = setInterval(playStep, 175);
+    if (!this.enabled) return;
+
+    if (!this.bgmAudio) {
+      this.bgmAudio = new Audio('/assets/audio/bgm_waltz.mp3'); // mp3 파일 경로
+      this.bgmAudio.loop = true;
+      this.bgmAudio.volume = 0.35;
+    }
+
+    if (this.bgmAudio.paused) {
+      void this.bgmAudio.play().catch(() => {});
+    }
   }
 
   public stopBgm() {
-    if (this.bgmTimer) clearInterval(this.bgmTimer);
-    this.bgmTimer = null;
+    if (this.bgmAudio) {
+      this.bgmAudio.pause();
+      this.bgmAudio.currentTime = 0;
+    }
   }
 
   private initCtx() {
@@ -218,50 +211,4 @@ class SoundSystem {
         osc.connect(gain);
         gain.connect(this.ctx.destination);
 
-        osc.start(now + idx * 0.08);
-        osc.stop(now + idx * 0.08 + 0.4);
-      });
-    } catch {
-      // Ignore
-    }
-  }
-
-  // Victory fanfare
-  public playVictory() {
-    if (!this.enabled) return;
-    this.initCtx();
-    if (!this.ctx) return;
-
-    try {
-      const now = this.ctx.currentTime;
-      const notes = [
-        { f: 440, t: 0, d: 0.15 },
-        { f: 554.37, t: 0.15, d: 0.15 },
-        { f: 659.25, t: 0.3, d: 0.15 },
-        { f: 880, t: 0.45, d: 0.6 }
-      ];
-
-      notes.forEach(({ f, t, d }) => {
-        if (!this.ctx) return;
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(f, now + t);
-
-        gain.gain.setValueAtTime(0.16, now + t);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + t + d);
-
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-
-        osc.start(now + t);
-        osc.stop(now + t + d + 0.05);
-      });
-    } catch {
-      // Ignore
-    }
-  }
-}
-
-export const sound = new SoundSystem();
+        osc.start
