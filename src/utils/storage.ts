@@ -81,7 +81,7 @@ export const storage = {
   loadProgress(size: BoardSize): number {
     try {
       const v = localStorage.getItem(`${PREFIX}prog_${size}`) || localStorage.getItem(`sd-prog-${size}`);
-      return Math.max(1, Number(v) || 1);
+      return Math.min(16, Math.max(1, Number(v) || 1));
     } catch {
       return 1;
     }
@@ -90,15 +90,19 @@ export const storage = {
   saveProgress(size: BoardSize, level: number) {
     try {
       const current = this.loadProgress(size);
-      if (level > current) {
-        localStorage.setItem(`${PREFIX}prog_${size}`, String(level));
-        localStorage.setItem(`sd-prog-${size}`, String(level));
+      const cappedLevel = Math.min(16, level);
+      if (cappedLevel > current) {
+        localStorage.setItem(`${PREFIX}prog_${size}`, String(cappedLevel));
+        localStorage.setItem(`sd-prog-${size}`, String(cappedLevel));
       }
     } catch {}
   },
 
   loadEndingUnlocked(size: BoardSize): boolean {
-    try { return localStorage.getItem(`${PREFIX}ending_${size}`) === '1'; } catch { return false; }
+    try {
+      const hasEndingFlag = localStorage.getItem(`${PREFIX}ending_${size}`) === '1';
+      return hasEndingFlag && this.loadLevelRecords(size).some(record => record.level === 16);
+    } catch { return false; }
   },
 
   saveEndingUnlocked(size: BoardSize) {
@@ -106,13 +110,14 @@ export const storage = {
   },
 
   loadHardProgress(size: BoardSize): number {
-    try { return Math.max(1, Number(localStorage.getItem(`${PREFIX}hard_prog_${size}`)) || 1); } catch { return 1; }
+    try { return Math.min(16, Math.max(1, Number(localStorage.getItem(`${PREFIX}hard_prog_${size}`)) || 1)); } catch { return 1; }
   },
 
   saveHardProgress(size: BoardSize, level: number) {
     try {
       const key = `${PREFIX}hard_prog_${size}`;
-      if (level > this.loadHardProgress(size)) localStorage.setItem(key, String(level));
+      const cappedLevel = Math.min(16, level);
+      if (cappedLevel > this.loadHardProgress(size)) localStorage.setItem(key, String(cappedLevel));
     } catch {}
   },
 
@@ -134,6 +139,26 @@ export const storage = {
       } else records.push(record);
       localStorage.setItem(key, JSON.stringify(records));
     } catch {}
+  },
+
+  loadInfiniteUnlocked(size: BoardSize): boolean {
+    try { return this.loadEndingUnlocked(size) && localStorage.getItem(`${PREFIX}infinite_unlocked_${size}`) === '1'; } catch { return false; }
+  },
+
+  saveInfiniteUnlocked(size: BoardSize) {
+    try {
+      if (this.loadEndingUnlocked(size)) localStorage.setItem(`${PREFIX}infinite_unlocked_${size}`, '1');
+    } catch {}
+  },
+
+  loadInfiniteRecord(size: BoardSize): number {
+    try { return Math.max(0, Number(localStorage.getItem(`${PREFIX}infinite_record_${size}`)) || 0); } catch { return 0; }
+  },
+
+  saveInfiniteRecord(size: BoardSize, score: number): number {
+    const best = Math.max(this.loadInfiniteRecord(size), Math.max(0, Math.floor(score)));
+    try { localStorage.setItem(`${PREFIX}infinite_record_${size}`, String(best)); } catch {}
+    return best;
   },
 
   // In-progress Game State (Mid-game saves disabled per user request: only clear records remain)

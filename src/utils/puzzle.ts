@@ -322,8 +322,10 @@ function generateEmergencyPuzzle(n: BoardSize, seed: number): PuzzleData | null 
 }
 
 /** 이전 호출부와 호환되는 생성기. 검증되지 않은 판은 반환하지 않는다. */
-export function generatePuzzle(n: BoardSize, level: number, hardMode = false): PuzzleData {
-  const seed = (n * 100003 + level * 7919 + (hardMode ? 0x6d2b79f5 : 0)) | 0;
+export function generatePuzzle(n: BoardSize, level: number, hardMode = false, randomSeed?: number): PuzzleData {
+  const seed = randomSeed === undefined
+    ? (n * 100003 + level * 7919 + (hardMode ? 0x6d2b79f5 : 0)) | 0
+    : randomSeed | 0;
   const rng = mulberry32(seed);
   for (let attempt = 0; attempt < 2000; attempt++) {
     const solution = randomPlacement(n, rng, hardMode);

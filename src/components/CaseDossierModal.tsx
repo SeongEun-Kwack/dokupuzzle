@@ -16,6 +16,8 @@ interface CaseDossierModalProps {
   hardUnlocked: boolean;
   hardMode: boolean;
   onSelectMode: (hardMode: boolean) => void;
+  infiniteUnlocked: boolean;
+  onEnterInfinite: () => void;
 }
 
 export const CaseDossierModal: React.FC<CaseDossierModalProps> = ({
@@ -30,7 +32,9 @@ export const CaseDossierModal: React.FC<CaseDossierModalProps> = ({
   onClose,
   hardUnlocked,
   hardMode,
-  onSelectMode
+  onSelectMode,
+  infiniteUnlocked,
+  onEnterInfinite
 }) => {
   if (!isOpen) return null;
 
@@ -40,7 +44,7 @@ export const CaseDossierModal: React.FC<CaseDossierModalProps> = ({
   const recordMap = new Map<number, LevelRecord>();
   records.forEach(r => recordMap.set(r.level, r));
 
-  const totalStagesToShow = Math.max(hardMode ? 88 : 16, maxUnlocked);
+  const totalStagesToShow = Math.max(16, maxUnlocked);
 
   return (
     <div
@@ -73,6 +77,7 @@ export const CaseDossierModal: React.FC<CaseDossierModalProps> = ({
             <button onClick={() => onSelectMode(false)} className={`flex-1 rounded-lg py-2 text-xs font-black ${!hardMode ? 'bg-[#6e4323] text-[#fff1d6]' : 'bg-[#ebd4ad] text-[#4a2a12]'}`}>{language === 'ko' ? '일반 모드' : 'Normal'}</button>
             <button onClick={() => onSelectMode(true)} className={`flex-1 rounded-lg py-2 text-xs font-black ${hardMode ? 'bg-[#6e4323] text-[#fff1d6]' : 'bg-[#ebd4ad] text-[#4a2a12]'}`}>{language === 'ko' ? `${boardSize}×${boardSize} 하드` : `${boardSize}×${boardSize} Hard`}</button>
           </div>}
+          {hardUnlocked && infiniteUnlocked && <button onClick={onEnterInfinite} className="rounded-lg border-2 border-[#8a5a2b] bg-[#6e4323] py-2 text-xs font-black text-[#fff1d6]">{language === 'ko' ? '하드 무한 모드 시작 · 최고 누적 기록' : 'Start Hard Endless · Best Total'}</button>}
           {/* Current Stage Card */}
           <div className="paper-note p-3.5">
             <div className="font-serif font-black text-base sm:text-lg text-[#6e4323] mb-1.5 flex items-center justify-between">
